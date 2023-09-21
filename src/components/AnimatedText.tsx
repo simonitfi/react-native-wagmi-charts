@@ -19,7 +19,6 @@ const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 export const AnimatedText = ({ text, style }: AnimatedTextProps) => {
   const inputRef = React.useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
-  const [minWidth, setMinWidth] = React.useState<undefined | number>(undefined);
 
   if (Platform.OS === 'web') {
     // For some reason, the worklet reaction evaluates upfront regardless of any
@@ -53,11 +52,8 @@ export const AnimatedText = ({ text, style }: AnimatedTextProps) => {
       editable={false}
       ref={Platform.select({ web: inputRef })}
       value={text.value}
-      style={[styles.text, style, {minWidth}]}
+      style={[styles.text, style]}
       animatedProps={animatedProps}
-      onLayout={(e) => {
-        setMinWidth(e.nativeEvent.layout.width);
-      }}
     />
   );
 };
