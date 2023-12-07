@@ -8,12 +8,14 @@ export function useLineChartDatetime({
   format,
   locale,
   options,
+  id
 }: {
   format?: TFormatterFn<number>;
   locale?: string;
   options?: Intl.DateTimeFormatOptions;
+  id?:string
 } = {}) {
-  const { currentIndex, data } = useLineChart();
+  const { currentIndex, data } = useLineChart(id);
 
   const timestamp = useDerivedValue(() => {
     if (typeof currentIndex.value === 'undefined' || currentIndex.value === -1)

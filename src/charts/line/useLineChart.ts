@@ -4,11 +4,11 @@ import { LineChartContext } from './Context';
 import { useLineChartData, useLineChartId } from './Data';
 import { useCurrentY } from './useCurrentY';
 
-export function useLineChart() {
+export function useLineChart(customId?:string) {
   const lineChartContext = React.useContext(LineChartContext);
   const maybeId = useLineChartId();
   const dataContext = useLineChartData({
-    id: maybeId,
+    id: customId ?? maybeId,
   });
   const currentY = useCurrentY();
 
