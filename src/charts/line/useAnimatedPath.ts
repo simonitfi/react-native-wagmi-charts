@@ -4,7 +4,7 @@ import {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import {SharedValue} from "react-native-reanimated/lib/types/lib";
+import { SharedValue } from "react-native-reanimated/lib/types/lib";
 import { interpolatePath } from './utils';
 import { usePrevious } from '../../utils';
 
@@ -26,7 +26,7 @@ export default function useAnimatedPath({
 
   useAnimatedReaction(
     () => {
-      currentPath.value = isActive.value ? path: smoothedPath;
+      currentPath.value = isActive.value ? path : smoothedPath;
       return currentPath.value;
     },
     (result, previous) => {
