@@ -6,7 +6,7 @@ import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import useAnimatedPath from './useAnimatedPath';
 import { useLineChart } from './useLineChart';
-import { getPath } from './utils';
+import { getPath, smoothData } from './utils';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -30,13 +30,15 @@ export function LineChartHighlight({
   width: strokeWidth = 3,
   ...props
 }: LineChartColorProps) {
-  const { data, yDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape } = React.useContext(
+  const { data, yDomain, xDomain } = useLineChart();
+  const { pathWidth, height, gutter, shape, smoothDataRadius } = React.useContext(
     LineChartDimensionsContext
   );
   const { isTransitionEnabled, isInactive: _isInactive } =
     React.useContext(LineChartPathContext);
   const isInactive = showInactiveColor && _isInactive;
+
+  const { isActive } = useLineChart();
 
   ////////////////////////////////////////////////
 
@@ -51,14 +53,46 @@ export function LineChartHighlight({
         gutter,
         shape,
         yDomain,
+        xDomain,
+        isOriginalData: true,
       });
     }
     return '';
-  }, [data, from, to, pathWidth, height, gutter, shape, yDomain]);
+  }, [data, from, to, pathWidth, height, gutter, shape, yDomain, xDomain]);
+
+  const smoothedPath = React.useMemo(() => {
+    if (data && data.length > 0) {
+      const radius = smoothDataRadius ? smoothDataRadius : 2;
+      return getPath({
+        data: smoothData(data, radius),
+        from,
+        to,
+        width: pathWidth,
+        height,
+        gutter,
+        shape,
+        yDomain,
+        xDomain,
+        isOriginalData: false,
+      });
+    }
+    return '';
+  }, [
+    data,
+    smoothDataRadius,
+    pathWidth,
+    height,
+    gutter,
+    shape,
+    yDomain,
+    xDomain,
+  ]);
 
   const { animatedProps } = useAnimatedPath({
     enabled: isTransitionEnabled,
-    path,
+    path: path,
+    smoothedPath: smoothedPath,
+    isActive,
   });
 
   ////////////////////////////////////////////////
