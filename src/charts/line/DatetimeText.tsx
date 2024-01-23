@@ -12,6 +12,7 @@ type LineChartDatetimeProps = {
   format?: TFormatterFn<number>;
   variant?: 'formatted' | 'value';
   style?: Animated.AnimateProps<RNTextProps>['style'];
+  id?:string
 };
 
 LineChartDatetimeText.displayName = 'LineChartDatetimeText';
@@ -22,7 +23,8 @@ export function LineChartDatetimeText({
   format,
   variant = 'formatted',
   style,
+  id
 }: LineChartDatetimeProps) {
-  const datetime = useLineChartDatetime({ format, locale, options });
+  const datetime = useLineChartDatetime({ format, locale, options, id });
   return <AnimatedText text={datetime[variant]} style={style} />;
 }

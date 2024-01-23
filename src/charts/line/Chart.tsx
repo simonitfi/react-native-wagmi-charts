@@ -5,7 +5,7 @@ import * as d3Shape from 'd3-shape';
 import { Dimensions, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path, parse } from 'react-native-redash';
-import { getArea, getPath } from './utils';
+import {getArea, getPath, smoothData} from './utils';
 
 import { LineChartContext } from './Context';
 
@@ -15,7 +15,10 @@ export const LineChartDimensionsContext = React.createContext({
   pointWidth: 0,
   parsedPath: {} as Path,
   path: '',
+  smoothedParsedPath: {} as Path,
+  smoothedPath: '',
   area: '',
+  smoothedArea: '',
   shape: d3Shape.curveBumpX,
   gutter: 0,
   pathWidth: 0,
@@ -32,6 +35,7 @@ type LineChartProps = ViewProps & {
    */
   id?: string;
   absolute?: boolean;
+  smoothDataRadius?: number;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -46,6 +50,7 @@ export function LineChart({
   shape = d3Shape.curveBumpX,
   id,
   absolute,
+  smoothDataRadius,
   ...props
 }: LineChartProps) {
   const { yDomain, xLength, xDomain } = React.useContext(LineChartContext);
@@ -71,10 +76,37 @@ export function LineChart({
         shape,
         yDomain,
         xDomain,
+        isOriginalData: true,
       });
     }
     return '';
   }, [data, pathWidth, height, yGutter, shape, yDomain, xDomain]);
+
+  const smoothedPath = React.useMemo(() => {
+    if (data && data.length > 0) {
+      const radius = smoothDataRadius ? smoothDataRadius : 2;
+      return getPath({
+        data: smoothData(data, radius),
+        width: pathWidth,
+        height,
+        gutter: yGutter,
+        shape,
+        yDomain,
+        xDomain,
+        isOriginalData: false,
+      });
+    }
+    return '';
+  }, [
+    data,
+    smoothDataRadius,
+    pathWidth,
+    height,
+    yGutter,
+    shape,
+    yDomain,
+    xDomain,
+  ]);
 
   const area = React.useMemo(() => {
     if (data && data.length > 0) {
@@ -86,13 +118,31 @@ export function LineChart({
         shape,
         yDomain,
         xDomain,
+        isOriginalData: true,
       });
     }
     return '';
   }, [data, pathWidth, height, yGutter, shape, yDomain, xDomain]);
 
+  const smoothedArea = React.useMemo(() => {
+    if (data && data.length > 0) {
+      const radius = smoothDataRadius ? smoothDataRadius : 2;
+      return getArea({
+        data: smoothData(data, radius),
+        width: pathWidth,
+        height,
+        gutter: yGutter,
+        shape,
+        yDomain,
+        isOriginalData: false,
+      });
+    }
+    return '';
+  }, [data, pathWidth, height, yGutter, shape, yDomain, smoothDataRadius]);
+
   const dataLength = data.length;
   const parsedPath = React.useMemo(() => parse(path), [path]);
+  const smoothedParsedPath = React.useMemo(() => parse(smoothedPath), [smoothedPath]);
   const pointWidth = React.useMemo(
     () => width / (dataLength - 1),
     [dataLength, width]
@@ -102,9 +152,12 @@ export function LineChart({
     () => ({
       gutter: yGutter,
       parsedPath,
+      smoothedParsedPath,
       pointWidth,
       area,
+      smoothedArea,
       path,
+      smoothedPath,
       width,
       height,
       pathWidth,
@@ -113,9 +166,12 @@ export function LineChart({
     [
       yGutter,
       parsedPath,
+      smoothedParsedPath,
       pointWidth,
       area,
+      smoothedArea,
       path,
+      smoothedPath,
       width,
       height,
       pathWidth,
