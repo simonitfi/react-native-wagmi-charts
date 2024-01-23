@@ -22,6 +22,7 @@ export const LineChartDimensionsContext = React.createContext({
   shape: d3Shape.curveBumpX,
   gutter: 0,
   pathWidth: 0,
+  smoothDataRadius: 2,
 });
 
 type LineChartProps = ViewProps & {
@@ -162,6 +163,7 @@ export function LineChart({
       height,
       pathWidth,
       shape,
+      smoothDataRadius
     }),
     [
       yGutter,
@@ -176,6 +178,7 @@ export function LineChart({
       height,
       pathWidth,
       shape,
+      smoothDataRadius
     ]
   );
 
