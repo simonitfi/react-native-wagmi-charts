@@ -28,7 +28,17 @@ export function getPath({
   xDomain?: [number, number];
   isOriginalData: boolean;
 }): string {
-  const timestamps = data.map(({ timestamp }, i) => (xDomain ? timestamp : i));
+  // Set from and to depending on null values on data
+  const fromNull = data.findIndex((element) => element.value !== null);
+  const toNull = fromNull !== 0 || data.findIndex((element) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element) => element.value === null) - 1;
+
+  from = from !== undefined && from > fromNull ? from : fromNull
+  to = to !== undefined && to < toNull ? to : toNull
+
+  const timestamps = new Array(data.length);
+  for (let i = 0; i < data.length; ++i) {
+    timestamps[i] = xDomain ? data[i].timestamp : i;
+  }
 
   const scaleX = scaleLinear()
     .domain(xDomain ?? [Math.min(...timestamps), Math.max(...timestamps)])
@@ -41,8 +51,8 @@ export function getPath({
     .defined((d: { timestamp: number }) =>
       from || to
         ? data
-            .slice(from, to ? to + 1 : undefined)
-            .find((item) => item.timestamp === d.timestamp)
+          .slice(from, to ? to + 1 : undefined)
+          .find((item) => item.timestamp === d.timestamp)
         : true
     )
     .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))

@@ -25,7 +25,14 @@ export function getArea({
   xDomain?: [number, number];
   isOriginalData: boolean;
 }): string {
-  const timestamps = data.map(({ timestamp }, i) => (xDomain ? timestamp : i));
+  // Set from and to depending on null values on data
+  const from = data.findIndex((element) => element.value !== null);
+  const to = from !== 0 || data.findIndex((element) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element) => element.value === null) - 1;
+
+  const timestamps = new Array(data.length);
+  for (let i = 0; i < data.length; ++i) {
+    timestamps[i] = xDomain ? data[i].timestamp : i;
+  }
 
   const scaleX = scaleLinear()
     .domain(xDomain ?? [Math.min(...timestamps), Math.max(...timestamps)])
@@ -34,7 +41,13 @@ export function getArea({
     .domain([yDomain.min, yDomain.max])
     .range([height - gutter, gutter]);
   const area = shape
-    .area()
+    .area().defined((d: { timestamp: number }) =>
+      from || to
+        ? data
+          .slice(from, to ? to + 1 : undefined)
+          .find((item) => item.timestamp === d.timestamp)
+        : true
+    )
     .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))
     .y0((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
     .y1(() => height)

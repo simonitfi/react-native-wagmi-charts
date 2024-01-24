@@ -56,7 +56,6 @@ export function LineChartProvider({
   useAnimatedReaction(
     () => isActive.value,
     () => {
-      console.log(isActive.value)
       if (onActiveChange){
         runOnJS(onActiveChange)(isActive.value);
       }        

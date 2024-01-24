@@ -7,6 +7,7 @@ import Animated, {
 
 import { LineChartCursor, LineChartCursorProps } from './Cursor';
 import { useLineChart } from './useLineChart';
+import { LineChartDimensionsContext } from './Chart';
 
 type LineChartCursorCrosshairProps = Omit<
   LineChartCursorProps,
@@ -33,7 +34,11 @@ export function LineChartCursorCrosshair({
   crosshairOuterProps = {},
   ...props
 }: LineChartCursorCrosshairProps) {
-  const { currentX, currentY, isActive } = useLineChart();
+  const { currentX, currentY, isActive, data } = useLineChart();
+
+  const { pathWidth: width } = React.useContext(
+    LineChartDimensionsContext
+  );
 
   // It seems that enabling spring animation on initial render on Android causes a crash.
   const [enableSpringAnimation, setEnableSpringAnimation] = React.useState(
@@ -46,20 +51,33 @@ export function LineChartCursorCrosshair({
   }, []);
 
   const animatedCursorStyle = useAnimatedStyle(
-    () => ({
-      transform: [
-        { translateX: currentX.value - outerSize / 2 },
-        { translateY: currentY.value - outerSize / 2 },
-        {
-          scale: enableSpringAnimation
-            ? withSpring(isActive.value ? 1 : 0, {
+    () => {
+      // Hide cursor for null values
+      const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
+      const minIndex = data.findIndex((element: { value: null; }) => element.value !== null);
+      const maxIndex = minIndex !== 0 || data.findIndex((element: { value: null; }) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element: { value: null; }) => element.value === null) - 1;
+      let opacity: number
+      if ((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex)) {
+        opacity = 1
+      } else {
+        opacity = 0
+      }
+      return {
+        transform: [
+          { translateX: currentX.value - outerSize / 2 },
+          { translateY: currentY.value - outerSize / 2 },
+          {
+            scale: enableSpringAnimation
+              ? withSpring(isActive.value ? 1 : 0, {
                 damping: 10,
               })
-            : 0,
-        },
-      ],
-    }),
-    [currentX, currentY, enableSpringAnimation, isActive, outerSize]
+              : 0,
+          },
+        ],
+        opacity
+      }
+    },
+    [currentX, currentY, enableSpringAnimation, isActive, outerSize, data]
   );
 
   return (

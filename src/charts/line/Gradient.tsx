@@ -11,6 +11,7 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 export type LineChartGradientProps = Animated.AnimateProps<PathProps> & {
   color?: string;
+  opacityValues?: Array<number>;
   children?: React.ReactNode;
 };
 
@@ -20,7 +21,9 @@ LineChartGradient.displayName = 'LineChartGradient';
 
 export function LineChartGradient({
   color: overrideColor = undefined,
+  opacityValues,
   children,
+  
   ...props
 }: LineChartGradientProps) {
   const { area, smoothedArea } = React.useContext(LineChartDimensionsContext);
@@ -29,6 +32,11 @@ export function LineChartGradient({
   const { isActive } = useLineChart();
 
   const color = overrideColor || contextColor;
+
+  const o1 = opacityValues && opacityValues[0]
+  const o2 = opacityValues && opacityValues[1]
+  const o3 = opacityValues && opacityValues[2]
+  const o4 = opacityValues && opacityValues[3]
 
   ////////////////////////////////////////////////
 
@@ -69,10 +77,10 @@ export function LineChartGradient({
             y1="0"
             y2="100%"
           >
-            <Stop offset="40%" stopColor={color} stopOpacity={0.15} />
-            <Stop offset="60%" stopColor={color} stopOpacity={0.10} />
-            <Stop offset="80%" stopColor={color} stopOpacity={0.05} />
-            <Stop offset="100%" stopColor={color} stopOpacity={0.01} />
+            <Stop offset="40%" stopColor={color} stopOpacity={o1 || 0.15} />
+            <Stop offset="60%" stopColor={color} stopOpacity={o2 || 0.10} />
+            <Stop offset="80%" stopColor={color} stopOpacity={o3 || 0.05} />
+            <Stop offset="100%" stopColor={color} stopOpacity={o4 || 0.01} />
           </LinearGradient>
         </Defs>
       )}

@@ -25,16 +25,32 @@ export function useLineChartDatetime({
   for (let index = 0; index < timeX.length; index++) {
     timeX[index] = width * (index / timeX.length)
   }
-  const dataY = data.map((obj) => obj.timestamp);
+  const dataStart = data.findIndex((a) => a.timestamp !== null)
+  const dataEnd = data.findLastIndex((a) => a.timestamp !== null)
+
+  const data_ = data.map((obj, index) => {
+    let result = obj
+    if (index < dataStart)
+      result = data[dataStart]
+    if (index > dataEnd)
+      result = data[dataEnd]
+    return result
+  });
+
+  const dataY = data_.map((obj) => obj.timestamp);
   const precalculated = precalculate(timeX, dataY);
 
   const timestamp = useDerivedValue(() => {
-    if (typeof currentX.value === 'number' && isActive.value){
+    if (currentIndex.value && data[Math.min(currentIndex.value, data.length - 1)]?.value === null) {
+      return ''
+    }
+    if (typeof currentX.value === 'number' && isActive.value && currentX.value <= width * ((dataEnd + 0.5) / timeX.length) &&
+      currentX.value >= width * ((dataStart - 0.5) / timeX.length)) {
       const res = akimaCubicInterpolation(timeX, dataY, currentX.value, precalculated)
       if (typeof res === 'number') return res
     }
     return '';
-  }, [currentIndex, currentX, data, precalculated, dataY, timeX]);
+  }, [currentIndex, currentX, data, precalculated, dataY, timeX, dataStart, dataEnd]);
 
   const timestampString = useDerivedValue(() => {
     if (typeof timestamp?.value !== 'number') return '';
