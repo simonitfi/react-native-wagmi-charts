@@ -11,6 +11,7 @@ import { LineChartPriceText, LineChartPriceTextProps } from './PriceText';
 import { CursorContext } from './Cursor';
 import { LineChartDimensionsContext } from './Chart';
 import type { LayoutChangeEvent, ViewProps } from 'react-native';
+import type { TFormatterFn } from '../candle/types';
 import { getXPositionForCurve } from './utils/getXPositionForCurve';
 import { getYForX } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
@@ -32,6 +33,7 @@ export type LineChartTooltipProps = Animated.AnimateProps<ViewProps> & {
    * @default undefined
    */
   at?: number;
+  format?: TFormatterFn<string>;
 };
 
 LineChartTooltip.displayName = 'LineChartTooltip';
@@ -45,13 +47,14 @@ export function LineChartTooltip({
   textProps,
   textStyle,
   at,
+  format,
   ...props
 }: LineChartTooltipProps) {
-  const { width, height, parsedPath } = React.useContext(
+  const { width, height, parsedPath, pointWidth } = React.useContext(
     LineChartDimensionsContext
   );
   const { type } = React.useContext(CursorContext);
-  const { currentX, currentY, isActive } = useLineChart();
+  const { currentX, currentY, isActive, data } = useLineChart();
 
   const x = useSharedValue(0);
   const elementWidth = useSharedValue(0);
@@ -68,12 +71,26 @@ export function LineChartTooltip({
 
   // When the user set a `at` index, get the index's y & x positions
   const atXPosition = useMemo(
+    () => {
+      if (at) {
+        for (let z = at; z > 0; z--) {
+          if (getYForX(parsedPath!, pointWidth * z - 1) !== null) return pointWidth * z - 1
+        }
+      }
+      return undefined
+    },
+    [at, pointWidth, parsedPath]
+  );
+
+  /*
+    const atXPosition = useMemo(
     () =>
       at !== null && at !== undefined
         ? getXPositionForCurve(parsedPath, at)
         : undefined,
     [at, parsedPath]
   );
+  */
 
   const atYPosition = useDerivedValue(() => {
     return atXPosition == null
@@ -130,6 +147,15 @@ export function LineChartTooltip({
       opacity = withTiming(isActive.value ? 0 : 1);
     }
 
+    // Set from and to depending on null values on data
+    const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
+    const minIndex = data.findIndex((element: { value: null; }) => element.value !== null);
+    const maxIndex = minIndex !== 0 || data.findIndex((element: { value: null; }) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element: { value: null; }) => element.value === null) - 1;
+
+    if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
+      opacity = 0
+    }
+
     return {
       transform: [
         { translateX: x - translateXOffset },
@@ -154,6 +180,7 @@ export function LineChartTooltip({
     width,
     xGutter,
     yGutter,
+    data
   ]);
 
   return (
@@ -171,7 +198,7 @@ export function LineChartTooltip({
       ]}
     >
       {children || (
-        <LineChartPriceText index={at} style={[textStyle]} {...textProps} />
+        <LineChartPriceText index={at} style={[textStyle]} {...textProps} format={format}/>
       )}
     </Animated.View>
   );
