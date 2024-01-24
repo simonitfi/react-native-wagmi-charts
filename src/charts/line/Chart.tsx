@@ -22,7 +22,7 @@ export const LineChartDimensionsContext = React.createContext({
   shape: d3Shape.curveBumpX,
   gutter: 0,
   pathWidth: 0,
-  smoothDataRadius: 2,
+  smoothDataRadius: 0.5,
 });
 
 type LineChartProps = ViewProps & {
@@ -85,7 +85,7 @@ export function LineChart({
 
   const smoothedPath = React.useMemo(() => {
     if (data && data.length > 0) {
-      const radius = smoothDataRadius ? smoothDataRadius : 2;
+      const radius = smoothDataRadius ? smoothDataRadius : 0.5;
       return getPath({
         data: smoothData(data, radius),
         width: pathWidth,
@@ -127,7 +127,7 @@ export function LineChart({
 
   const smoothedArea = React.useMemo(() => {
     if (data && data.length > 0) {
-      const radius = smoothDataRadius ? smoothDataRadius : 2;
+      const radius = smoothDataRadius ? smoothDataRadius : 0.5;
       return getArea({
         data: smoothData(data, radius),
         width: pathWidth,
