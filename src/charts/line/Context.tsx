@@ -30,6 +30,7 @@ type LineChartProviderProps = {
   onCurrentIndexChange?: (x: number) => void;
   xLength?: number;
   xDomain?: [number, number];
+  onActiveChange?: (isActive: boolean) => void;
 };
 
 LineChartProvider.displayName = 'LineChartProvider';
@@ -41,6 +42,7 @@ export function LineChartProvider({
   onCurrentIndexChange,
   xLength,
   xDomain,
+  onActiveChange
 }: LineChartProviderProps) {
   const currentX = useSharedValue(-1);
   const currentIndex = useSharedValue(-1);
@@ -49,6 +51,17 @@ export function LineChartProvider({
   const domain = React.useMemo(
     () => getDomain(Array.isArray(data) ? data : Object.values(data)[0]),
     [data]
+  );
+
+  useAnimatedReaction(
+    () => isActive.value,
+    () => {
+      console.log(isActive.value)
+      if (onActiveChange){
+        runOnJS(onActiveChange)(isActive.value);
+      }        
+    },
+    [isActive]
   );
 
   const contextValue = React.useMemo<TLineChartContext>(() => {
