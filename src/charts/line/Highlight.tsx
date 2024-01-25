@@ -1,5 +1,5 @@
 import * as React from 'react';
-import Animated from 'react-native-reanimated';
+import Animated, { runOnJS, useDerivedValue } from 'react-native-reanimated';
 import { Path, PathProps } from 'react-native-svg';
 
 import { LineChartDimensionsContext } from './Chart';
@@ -30,8 +30,8 @@ export function LineChartHighlight({
   width: strokeWidth = 3,
   ...props
 }: LineChartColorProps) {
-  const { data, yDomain, xDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape, smoothDataRadius } = React.useContext(
+  const { data, yDomain, xDomain, lastPath } = useLineChart();
+  const { pathWidth, height, gutter, shape, smoothDataRadius, update, isLiveData } = React.useContext(
     LineChartDimensionsContext
   );
   const { isTransitionEnabled, isInactive: _isInactive } =
@@ -40,10 +40,48 @@ export function LineChartHighlight({
 
   const { isActive } = useLineChart();
 
+  //console.log('xxx',lastPath.current)
+
   ////////////////////////////////////////////////
 
-  const path = React.useMemo(() => {
+  const smoothedPath = React.useMemo(() => {
     if (data && data.length > 0) {
+      const radius = smoothDataRadius ? smoothDataRadius : 0.5;
+      if (lastPath.current.from === from && lastPath.current.to === to) return lastPath.current.data
+      console.log('getPath',from, to)
+      const result = getPath({
+        data: smoothData(data, radius),
+        from,
+        to,
+        width: pathWidth,
+        height,
+        gutter,
+        shape,
+        yDomain,
+        xDomain,
+        isOriginalData: false,
+      });
+      lastPath.current.from = from
+      lastPath.current.to = to
+      lastPath.current.data = result
+      return result
+    }
+    return '';
+  }, [
+    data,
+    smoothDataRadius,
+    pathWidth,
+    height,
+    gutter,
+    shape,
+    yDomain,
+    xDomain,
+  ]);
+
+  const path = React.useMemo(() => {
+    if (update === 0 || (!isActive.value && isLiveData)) return smoothedPath
+    if (data && data.length > 0) {
+      console.log('getPath HIGHLIGHT',height, gutter, shape, yDomain, xDomain, update)
       return getPath({
         data,
         from,
@@ -58,43 +96,14 @@ export function LineChartHighlight({
       });
     }
     return '';
-  }, [data, from, to, pathWidth, height, gutter, shape, yDomain, xDomain]);
-
-  const smoothedPath = React.useMemo(() => {
-    if (data && data.length > 0) {
-      const radius = smoothDataRadius ? smoothDataRadius : 2;
-      return getPath({
-        data: smoothData(data, radius),
-        from,
-        to,
-        width: pathWidth,
-        height,
-        gutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: false,
-      });
-    }
-    return '';
-  }, [
-    data,
-    smoothDataRadius,
-    pathWidth,
-    height,
-    gutter,
-    shape,
-    yDomain,
-    xDomain,
-  ]);
+  }, [height, gutter, shape, update]);
 
   const { animatedProps } = useAnimatedPath({
     enabled: isTransitionEnabled,
-    path: path,
+    path: (update === 0 || (!isActive.value)) ? smoothedPath : path,
     smoothedPath: smoothedPath,
     isActive,
   });
-
   ////////////////////////////////////////////////
 
   return (

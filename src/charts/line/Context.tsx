@@ -20,7 +20,7 @@ export const LineChartContext = React.createContext<TLineChartContext>({
     max: 0,
   },
   xDomain: undefined,
-  xLength: 0,
+  xLength: 0
 });
 
 type LineChartProviderProps = {
@@ -53,15 +53,8 @@ export function LineChartProvider({
     [data]
   );
 
-  useAnimatedReaction(
-    () => isActive.value,
-    () => {
-      if (onActiveChange){
-        runOnJS(onActiveChange)(isActive.value);
-      }        
-    },
-    [isActive]
-  );
+
+  const lastPath = React.useRef({from: 0, to: 0, data: '', fromData: '', toData: ''});
 
   const contextValue = React.useMemo<TLineChartContext>(() => {
     const values = lineChartDataPropToArray(data).map(({ value }) => value);
@@ -71,6 +64,7 @@ export function LineChartProvider({
       currentIndex,
       isActive,
       domain,
+      lastPath,
       yDomain: {
         min: yRange?.min ?? Math.min(...values),
         max: yRange?.max ?? Math.max(...values),
@@ -90,6 +84,17 @@ export function LineChartProvider({
     xLength,
     xDomain,
   ]);
+
+  useAnimatedReaction(
+    () => isActive.value,
+    (data: any, prevData: any) => {
+      const prevData_ = !!prevData
+      if (data !== prevData_ && onActiveChange) {
+        runOnJS(onActiveChange)(isActive.value);
+      }
+    },
+    [isActive, onActiveChange]
+  );
 
   useAnimatedReaction(
     () => currentIndex.value,

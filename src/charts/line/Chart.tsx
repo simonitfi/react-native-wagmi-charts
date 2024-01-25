@@ -5,9 +5,10 @@ import * as d3Shape from 'd3-shape';
 import { Dimensions, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path, parse } from 'react-native-redash';
-import {getArea, getPath, smoothData} from './utils';
+import { getArea, getPath, smoothData } from './utils';
 
 import { LineChartContext } from './Context';
+import { runOnJS, useDerivedValue } from 'react-native-reanimated';
 
 export const LineChartDimensionsContext = React.createContext({
   width: 0,
@@ -23,6 +24,9 @@ export const LineChartDimensionsContext = React.createContext({
   gutter: 0,
   pathWidth: 0,
   smoothDataRadius: 0.5,
+  update: 0,
+  isLiveData: false,
+  updateContext: 0
 });
 
 type LineChartProps = ViewProps & {
@@ -37,6 +41,7 @@ type LineChartProps = ViewProps & {
   id?: string;
   absolute?: boolean;
   smoothDataRadius?: number;
+  isLiveData?: boolean;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -52,12 +57,30 @@ export function LineChart({
   id,
   absolute,
   smoothDataRadius,
+  isLiveData = false,
   ...props
 }: LineChartProps) {
-  const { yDomain, xLength, xDomain } = React.useContext(LineChartContext);
+  const { yDomain, xLength, xDomain, isActive } = React.useContext(LineChartContext);
   const { data } = useLineChartData({
     id,
   });
+
+  const [update, setUpdate] = React.useState(0);
+  const [updateContext, setUpdateContext] = React.useState(0);
+
+  useDerivedValue(() => {
+    console.log(isLiveData, isActive.value);
+    if (isLiveData) runOnJS(setUpdate)(Date.now())
+    else runOnJS(setUpdateContext)(Date.now())
+  }, []); // No need to pass dependencies
+
+  console.log('RENDER', isLiveData, update, (update === 0 || (!isActive.value)), updateContext, data.length)
+
+  React.useEffect(() => {
+    const timeout = setTimeout(() => {
+      setUpdate(Date.now())
+    }, 1500)
+  }, []);
 
   const pathWidth = React.useMemo(() => {
     let allowedWidth = width;
@@ -66,22 +89,6 @@ export function LineChart({
     }
     return allowedWidth;
   }, [data.length, width, xLength]);
-
-  const path = React.useMemo(() => {
-    if (data && data.length > 0) {
-      return getPath({
-        data,
-        width: pathWidth,
-        height,
-        gutter: yGutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: true,
-      });
-    }
-    return '';
-  }, [data, pathWidth, height, yGutter, shape, yDomain, xDomain]);
 
   const smoothedPath = React.useMemo(() => {
     if (data && data.length > 0) {
@@ -109,9 +116,14 @@ export function LineChart({
     xDomain,
   ]);
 
-  const area = React.useMemo(() => {
+  const path = React.useMemo(() => {
+    if (update === 0 || (!isActive.value && isLiveData)){
+      console.log('getPath !!', update, isActive.value)
+      return smoothedPath
+    } 
     if (data && data.length > 0) {
-      return getArea({
+      console.log('getPath',height, yGutter, shape, yDomain, xDomain, update)
+      return getPath({
         data,
         width: pathWidth,
         height,
@@ -123,7 +135,7 @@ export function LineChart({
       });
     }
     return '';
-  }, [data, pathWidth, height, yGutter, shape, yDomain, xDomain]);
+  }, [height, yGutter, shape, update]);
 
   const smoothedArea = React.useMemo(() => {
     if (data && data.length > 0) {
@@ -141,9 +153,28 @@ export function LineChart({
     return '';
   }, [data, pathWidth, height, yGutter, shape, yDomain, smoothDataRadius]);
 
+  const area = React.useMemo(() => {
+    if (update === 0 || (!isActive.value && isLiveData)) return smoothedArea
+    if (data && data.length > 0) {
+      console.log('getArea',height, yGutter, shape, yDomain, xDomain, update)
+      return getArea({
+        data,
+        width: pathWidth,
+        height,
+        gutter: yGutter,
+        shape,
+        yDomain,
+        xDomain,
+        isOriginalData: true,
+      });
+    }
+    return '';
+  }, [height, yGutter, shape, update]);
+
   const dataLength = data.length;
-  const parsedPath = React.useMemo(() => parse(path), [path]);
   const smoothedParsedPath = React.useMemo(() => parse(smoothedPath), [smoothedPath]);
+  const parsedPath = React.useMemo(() => parse(path), [update]);
+
   const pointWidth = React.useMemo(
     () => width / (dataLength - 1),
     [dataLength, width]
@@ -152,18 +183,21 @@ export function LineChart({
   const contextValue = React.useMemo(
     () => ({
       gutter: yGutter,
-      parsedPath,
+      parsedPath: (update === 0 || (!isActive.value)) ? smoothedParsedPath : parsedPath,
       smoothedParsedPath,
       pointWidth,
-      area,
+      area: (update === 0 || (!isActive.value)) ? smoothedArea : area,
       smoothedArea,
-      path,
+      path: (update === 0 || (!isActive.value)) ? smoothedPath : path,
       smoothedPath,
       width,
       height,
       pathWidth,
       shape,
-      smoothDataRadius
+      smoothDataRadius,
+      update,
+      isLiveData,
+      updateContext
     }),
     [
       yGutter,
@@ -178,7 +212,10 @@ export function LineChart({
       height,
       pathWidth,
       shape,
-      smoothDataRadius
+      smoothDataRadius,
+      update,
+      isLiveData,
+      updateContext
     ]
   );
 

@@ -20,6 +20,7 @@ export type TLineChartContext = {
   yDomain: YDomain;
   xLength: number;
   xDomain?: [number, number] | undefined;
+  lastPath?: React.RefObject<any>;
 };
 
 export type YRangeProp = {

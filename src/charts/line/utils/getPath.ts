@@ -39,6 +39,7 @@ export function getPath({
   for (let i = 0; i < data.length; ++i) {
     timestamps[i] = xDomain ? data[i].timestamp : i;
   }
+  const now = Date.now()
 
   const scaleX = scaleLinear()
     .domain(xDomain ?? [Math.min(...timestamps), Math.max(...timestamps)])
@@ -58,5 +59,8 @@ export function getPath({
     .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))
     .y((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
     .curve(_shape)(data);
+  const res = Date.now() - now
+  console.log('CURVE MEASURE getPath', res, isOriginalData,  from, to)
+
   return path;
 }

@@ -60,7 +60,7 @@ export function LineChartDot({
   outerSize = size * 4,
 }: LineChartDotProps) {
   const { isActive } = useLineChart();
-  const { parsedPath } = React.useContext(LineChartDimensionsContext);
+  const { parsedPath, smoothedParsedPath } = React.useContext(LineChartDimensionsContext);
 
   ////////////////////////////////////////////////////////////
 
@@ -73,12 +73,12 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-    return withTiming(getXPositionForCurve(parsedPath, at));
-  }, [at, parsedPath]);
+    return withTiming(getXPositionForCurve(isActive.value ? parsedPath : smoothedParsedPath, at));
+  }, [at, parsedPath, smoothedParsedPath]);
 
   const y = useDerivedValue(
-    () => withTiming(getYForX(parsedPath!, x.value) || 0),
-    [parsedPath, x]
+    () => withTiming(getYForX((isActive.value ? parsedPath : smoothedParsedPath)!, x.value) || 0),
+    [parsedPath, smoothedParsedPath, x]
   );
 
   ////////////////////////////////////////////////////////////
