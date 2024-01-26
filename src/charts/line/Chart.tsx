@@ -9,7 +9,7 @@ import { addPath, findPath, getArea, getPath, smoothData } from './utils';
 
 import { LineChartContext } from './Context';
 import { runOnJS, useDerivedValue } from 'react-native-reanimated';
-import { LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
+import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 
 export const LineChartDimensionsContext = React.createContext({
   width: 0,
@@ -152,7 +152,6 @@ export function LineChart({
 
   const path = React.useMemo(() => {
     if (update === 0 || (!isActive.value && isLiveData)) {
-      console.log('getPath !!', update, isActive.value)
       return smoothedPath
     }
     if (data && data.length > 0) {
@@ -174,7 +173,7 @@ export function LineChart({
   const smoothedArea = React.useMemo(() => {
     if (data && data.length > 0) {
       const radius = smoothDataRadius ? smoothDataRadius : 0.5;
-      console.log('getArea !!', pathWidth, height, yGutter, shape, yDomain,)
+      // console.log('getArea !!', pathWidth, height, yGutter, shape, yDomain,)
       const bPath = findPath({
         from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: '',
         index: 0,
@@ -234,8 +233,8 @@ export function LineChart({
 
   const dataLength = data.length;
   const smoothedParsedPath = React.useMemo(() => {
-    console.log('¤¤¤¤¤¤¤¤¤¤smoothedParsedPath')
-    console.log('getPath', height, yGutter, shape, yDomain, xDomain, update)
+    //console.log('¤¤¤¤¤¤¤¤¤¤smoothedParsedPath')
+    // console.log('getPath', height, yGutter, shape, yDomain, xDomain, update)
     return parse(smoothedPath)
   }, [smoothedPath]);
   const parsedPath = React.useMemo(() => parse(path), [update]);

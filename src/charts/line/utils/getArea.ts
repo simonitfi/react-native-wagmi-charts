@@ -8,6 +8,8 @@ import { scaleLinear } from 'd3-scale';
 
 export function getArea({
   data,
+  from,
+  to,
   width,
   height,
   gutter,
@@ -17,6 +19,8 @@ export function getArea({
   isOriginalData,
 }: {
   data: TLineChartData;
+  from?: number;
+  to?: number;
   width: number;
   height: number;
   gutter: number;
@@ -26,8 +30,12 @@ export function getArea({
   isOriginalData: boolean;
 }): string {
   // Set from and to depending on null values on data
-  const from = data.findIndex((element) => element.value !== null);
-  const to = from !== 0 || data.findIndex((element) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element) => element.value === null) - 1;
+  // Set from and to depending on null values on data
+  const fromNull = data.findIndex((element) => element.value !== null);
+  const toNull = fromNull !== 0 || data.findIndex((element) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element) => element.value === null) - 1;
+
+  from = from !== undefined && from > fromNull ? from : fromNull
+  to = to !== undefined && to < toNull ? to : toNull
 
   const timestamps = new Array(data.length);
   for (let i = 0; i < data.length; ++i) {
