@@ -53,9 +53,6 @@ export function LineChartProvider({
     [data]
   );
 
-
-  const lastPath = React.useRef({from: 0, to: 0, data: '', fromData: '', toData: ''});
-
   const contextValue = React.useMemo<TLineChartContext>(() => {
     const values = lineChartDataPropToArray(data).map(({ value }) => value);
 
@@ -64,7 +61,6 @@ export function LineChartProvider({
       currentIndex,
       isActive,
       domain,
-      lastPath,
       yDomain: {
         min: yRange?.min ?? Math.min(...values),
         max: yRange?.max ?? Math.max(...values),

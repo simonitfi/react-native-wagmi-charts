@@ -8,8 +8,8 @@ export type TLineChartPoint = {
 export type TLineChartDataProp =
   | TLineChartData
   | {
-      [key: string]: TLineChartData;
-    };
+    [key: string]: TLineChartData;
+  };
 export type TLineChartData = Array<TLineChartPoint>;
 export type TLineChartDomain = [number, number];
 export type TLineChartContext = {
@@ -20,7 +20,6 @@ export type TLineChartContext = {
   yDomain: YDomain;
   xLength: number;
   xDomain?: [number, number] | undefined;
-  lastPath?: React.RefObject<any>;
 };
 
 export type YRangeProp = {
@@ -32,3 +31,40 @@ export type YDomain = {
   min: number;
   max: number;
 };
+
+export type LineChartPath = {
+  index: number;
+  from: number;
+  to: number;
+  fromData: number;
+  toData: number;
+  totalLength: number;
+  data: string;
+  meta: {
+    pathWidth: number;
+    height: number;
+    gutter: number;
+    yDomain: YDomain;
+    xDomain: [number, number] | undefined;
+  } | string
+};
+
+export type LineChartPathBuffer = Array<LineChartPath>;
+
+export type LineChartArea = {
+  index: number;
+  from: number;
+  to: number;
+  fromData: number;
+  toData: number;
+  totalLength: number;
+  data: string;
+  meta: {
+    pathWidth: number;
+    height: number;
+    gutter: number;
+    yDomain: YDomain;
+  } | string
+};
+
+export type LineChartAreaBuffer = Array<LineChartArea>;

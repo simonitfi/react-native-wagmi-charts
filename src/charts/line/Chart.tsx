@@ -5,10 +5,11 @@ import * as d3Shape from 'd3-shape';
 import { Dimensions, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path, parse } from 'react-native-redash';
-import { getArea, getPath, smoothData } from './utils';
+import { addPath, findPath, getArea, getPath, smoothData } from './utils';
 
 import { LineChartContext } from './Context';
 import { runOnJS, useDerivedValue } from 'react-native-reanimated';
+import { LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 
 export const LineChartDimensionsContext = React.createContext({
   width: 0,
@@ -26,8 +27,11 @@ export const LineChartDimensionsContext = React.createContext({
   smoothDataRadius: 0.5,
   update: 0,
   isLiveData: false,
-  updateContext: 0
+  updateContext: 0,
+  pathBuffer: {} as React.RefObject<LineChartPathBuffer>,
+  areaBuffer: {} as React.RefObject<LineChartAreaBuffer>
 });
+
 
 type LineChartProps = ViewProps & {
   children: React.ReactNode;
@@ -67,6 +71,8 @@ export function LineChart({
 
   const [update, setUpdate] = React.useState(0);
   const [updateContext, setUpdateContext] = React.useState(0);
+  const pathBuffer = React.useRef([]);
+  const areaBuffer = React.useRef([]);
 
   useDerivedValue(() => {
     console.log(isLiveData, isActive.value);
@@ -93,7 +99,22 @@ export function LineChart({
   const smoothedPath = React.useMemo(() => {
     if (data && data.length > 0) {
       const radius = smoothDataRadius ? smoothDataRadius : 0.5;
-      return getPath({
+      const bPath = findPath({
+        from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: '',
+        index: 0,
+        meta: {
+          pathWidth: pathWidth,
+          height: height,
+          gutter: yGutter,
+          yDomain,
+          xDomain
+        }
+      }, pathBuffer.current)
+      if (bPath) {
+        console.log('FOUND OLD ONE #')
+        return bPath.data
+      }
+      const result = getPath({
         data: smoothData(data, radius),
         width: pathWidth,
         height,
@@ -103,6 +124,19 @@ export function LineChart({
         xDomain,
         isOriginalData: false,
       });
+      if (typeof data[data.length - 1].smoothedValue === 'number' && typeof data[0].smoothedValue === 'number')
+        addPath({
+          from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: result,
+          index: 0,
+          meta: {
+            pathWidth: pathWidth,
+            height: height,
+            gutter: yGutter,
+            yDomain,
+            xDomain
+          }
+        }, pathBuffer.current)
+      return result
     }
     return '';
   }, [
@@ -117,12 +151,12 @@ export function LineChart({
   ]);
 
   const path = React.useMemo(() => {
-    if (update === 0 || (!isActive.value && isLiveData)){
+    if (update === 0 || (!isActive.value && isLiveData)) {
       console.log('getPath !!', update, isActive.value)
       return smoothedPath
-    } 
+    }
     if (data && data.length > 0) {
-      console.log('getPath',height, yGutter, shape, yDomain, xDomain, update)
+      // console.log('getPath',height, yGutter, shape, yDomain, xDomain, update)
       return getPath({
         data,
         width: pathWidth,
@@ -140,7 +174,22 @@ export function LineChart({
   const smoothedArea = React.useMemo(() => {
     if (data && data.length > 0) {
       const radius = smoothDataRadius ? smoothDataRadius : 0.5;
-      return getArea({
+      console.log('getArea !!', pathWidth, height, yGutter, shape, yDomain,)
+      const bPath = findPath({
+        from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: '',
+        index: 0,
+        meta: {
+          pathWidth: pathWidth,
+          height: height,
+          gutter: yGutter,
+          yDomain
+        }
+      }, areaBuffer.current)
+      if (bPath) {
+        console.log('FOUND OLD ONE #')
+        return bPath.data
+      }
+      const result = getArea({
         data: smoothData(data, radius),
         width: pathWidth,
         height,
@@ -149,6 +198,18 @@ export function LineChart({
         yDomain,
         isOriginalData: false,
       });
+      if (typeof data[data.length - 1].smoothedValue === 'number' && typeof data[0].smoothedValue === 'number')
+        addPath({
+          from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: result,
+          index: 0,
+          meta: {
+            pathWidth: pathWidth,
+            height: height,
+            gutter: yGutter,
+            yDomain
+          }
+        }, areaBuffer.current)
+      return result
     }
     return '';
   }, [data, pathWidth, height, yGutter, shape, yDomain, smoothDataRadius]);
@@ -156,7 +217,7 @@ export function LineChart({
   const area = React.useMemo(() => {
     if (update === 0 || (!isActive.value && isLiveData)) return smoothedArea
     if (data && data.length > 0) {
-      console.log('getArea',height, yGutter, shape, yDomain, xDomain, update)
+      // console.log('getArea',height, yGutter, shape, yDomain, xDomain, update)
       return getArea({
         data,
         width: pathWidth,
@@ -172,7 +233,11 @@ export function LineChart({
   }, [height, yGutter, shape, update]);
 
   const dataLength = data.length;
-  const smoothedParsedPath = React.useMemo(() => parse(smoothedPath), [smoothedPath]);
+  const smoothedParsedPath = React.useMemo(() => {
+    console.log('¤¤¤¤¤¤¤¤¤¤smoothedParsedPath')
+    console.log('getPath', height, yGutter, shape, yDomain, xDomain, update)
+    return parse(smoothedPath)
+  }, [smoothedPath]);
   const parsedPath = React.useMemo(() => parse(path), [update]);
 
   const pointWidth = React.useMemo(
@@ -197,7 +262,9 @@ export function LineChart({
       smoothDataRadius,
       update,
       isLiveData,
-      updateContext
+      updateContext,
+      pathBuffer,
+      areaBuffer
     }),
     [
       yGutter,
