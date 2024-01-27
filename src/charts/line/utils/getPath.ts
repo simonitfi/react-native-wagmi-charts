@@ -60,7 +60,7 @@ export function getPath({
     .y((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
     .curve(_shape)(data);
   const res = Date.now() - now
-  console.log('CURVE MEASURE getPath', res, isOriginalData,  from, to)
+  console.log('CURVE MEASURE getPath', res, isOriginalData)
 
   return path;
 }

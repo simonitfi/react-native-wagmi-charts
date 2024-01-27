@@ -3,6 +3,7 @@
  */
 
 export function precalculate(x: number[], y: number[]) {
+    'worklet'
     const n = x.length;
     const m = new Array(n);
     const slope = new Array(n - 1);

@@ -12,7 +12,6 @@ import { CursorContext } from './Cursor';
 import { LineChartDimensionsContext } from './Chart';
 import type { LayoutChangeEvent, ViewProps } from 'react-native';
 import type { TFormatterFn } from '../candle/types';
-import { getXPositionForCurve } from './utils/getXPositionForCurve';
 import { getYForX } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
 import { useMemo } from 'react';
@@ -72,25 +71,15 @@ export function LineChartTooltip({
   // When the user set a `at` index, get the index's y & x positions
   const atXPosition = useMemo(
     () => {
-      if (at) {
-        for (let z = at; z > 0; z--) {
-          if (getYForX(parsedPath!, pointWidth * z - 1) !== null) return pointWidth * z - 1
-        }
-      }
-      return undefined
+      const result = at !== null && at !== undefined
+        ? at === 0
+          ? 0
+          : parsedPath.curves[Math.min(at, parsedPath.curves.length) - 1].to.x
+        : undefined
+      return result
     },
-    [at, pointWidth, parsedPath]
+    [at, parsedPath.curves]
   );
-
-  /*
-    const atXPosition = useMemo(
-    () =>
-      at !== null && at !== undefined
-        ? getXPositionForCurve(parsedPath, at)
-        : undefined,
-    [at, parsedPath]
-  );
-  */
 
   const atYPosition = useDerivedValue(() => {
     return atXPosition == null
@@ -198,7 +187,7 @@ export function LineChartTooltip({
       ]}
     >
       {children || (
-        <LineChartPriceText index={at} style={[textStyle]} {...textProps} format={format}/>
+        <LineChartPriceText index={at} style={[textStyle]} {...textProps} format={format} />
       )}
     </Animated.View>
   );

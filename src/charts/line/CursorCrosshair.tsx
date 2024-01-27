@@ -34,7 +34,7 @@ export function LineChartCursorCrosshair({
   crosshairOuterProps = {},
   ...props
 }: LineChartCursorCrosshairProps) {
-  const { currentX, currentY, isActive, data } = useLineChart();
+  const { currentX, currentY, isActive, data, xDomain } = useLineChart();
 
   const { pathWidth: width } = React.useContext(
     LineChartDimensionsContext
@@ -56,9 +56,16 @@ export function LineChartCursorCrosshair({
       const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
       const minIndex = data.findIndex((element: { value: null; }) => element.value !== null);
       const maxIndex = minIndex !== 0 || data.findIndex((element: { value: null; }) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element: { value: null; }) => element.value === null) - 1;
+
+      const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
+      const minVal = xDomain ? data[minIndex].timestamp : minIndex
+      const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
+
       let opacity: number
-      if ((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex)) {
+
+      if ((boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
         opacity = 1
+        console.log('visible', boundedX)
       } else {
         opacity = 0
       }
