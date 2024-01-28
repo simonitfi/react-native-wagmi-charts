@@ -60,12 +60,10 @@ export function LineChartCursorCrosshair({
       const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
       const minVal = xDomain ? data[minIndex].timestamp : minIndex
       const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
-
       let opacity: number
 
       if ((boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
         opacity = 1
-        console.log('visible', boundedX)
       } else {
         opacity = 0
       }

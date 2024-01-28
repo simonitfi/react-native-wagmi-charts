@@ -53,7 +53,7 @@ export function LineChartTooltip({
     LineChartDimensionsContext
   );
   const { type } = React.useContext(CursorContext);
-  const { currentX, currentY, isActive, data } = useLineChart();
+  const { currentX, currentY, isActive, data, xDomain } = useLineChart();
 
   const x = useSharedValue(0);
   const elementWidth = useSharedValue(0);
@@ -140,10 +140,19 @@ export function LineChartTooltip({
     const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
     const minIndex = data.findIndex((element: { value: null; }) => element.value !== null);
     const maxIndex = minIndex !== 0 || data.findIndex((element: { value: null; }) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element: { value: null; }) => element.value === null) - 1;
-
+    
+    const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
+    const minVal = xDomain ? data[minIndex].timestamp : minIndex
+    const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
+    
     if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
       opacity = 0
     }
+/*
+    if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
+      opacity = 0
+    }
+*/
 
     return {
       transform: [
