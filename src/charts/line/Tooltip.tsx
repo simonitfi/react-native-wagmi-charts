@@ -32,6 +32,7 @@ export type LineChartTooltipProps = Animated.AnimateProps<ViewProps> & {
    * @default undefined
    */
   at?: number;
+  sAt?: number;
   format?: TFormatterFn<string>;
 };
 
@@ -46,6 +47,7 @@ export function LineChartTooltip({
   textProps,
   textStyle,
   at,
+  sAt = at,
   format,
   ...props
 }: LineChartTooltipProps) {
@@ -71,14 +73,15 @@ export function LineChartTooltip({
   // When the user set a `at` index, get the index's y & x positions
   const atXPosition = useMemo(
     () => {
-      const result = at !== null && at !== undefined
+      const at_ = isActive.value ? at : sAt
+      const result = at_ !== null && at_ !== undefined
         ? at === 0
           ? 0
-          : parsedPath.curves[Math.min(at, parsedPath.curves.length) - 1].to.x
+          : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x
         : undefined
       return result
     },
-    [at, parsedPath.curves]
+    [at, sAt, parsedPath.curves]
   );
 
   const atYPosition = useDerivedValue(() => {
@@ -89,7 +92,7 @@ export function LineChartTooltip({
 
   const animatedCursorStyle = useAnimatedStyle(() => {
     let translateXOffset = elementWidth.value / 2;
-    // the tooltip is considered static when the user specified an `at` prop
+    // the tooltip is considered static when the user specified an `at` prop 
     const isStatic = atYPosition.value != null;
 
     // Calculate X position:

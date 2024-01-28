@@ -6,7 +6,7 @@ import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import useAnimatedPath from './useAnimatedPath';
 import { useLineChart } from './useLineChart';
-import { addPath, findPath, getPath, smoothData } from './utils';
+import { addPath, findPath, getPath, smoothData_ } from './utils';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -14,6 +14,8 @@ export type LineChartColorProps = Animated.AnimateProps<PathProps> & {
   color?: string;
   from: number;
   to: number;
+  sFrom?: number;
+  sTo?: number;
   showInactiveColor?: boolean;
   inactiveColor?: string;
   width?: number;
@@ -27,10 +29,12 @@ export function LineChartHighlight({
   showInactiveColor = true,
   from,
   to,
+  sFrom = from,
+  sTo = to,
   width: strokeWidth = 3,
   ...props
 }: LineChartColorProps) {
-  const { data, yDomain, xDomain } = useLineChart();
+  const { data, sData, yDomain, xDomain } = useLineChart();
   const { pathWidth, height, gutter, shape, smoothDataRadius, update, isLiveData, pathBuffer } = React.useContext(
     LineChartDimensionsContext
   );
@@ -40,13 +44,14 @@ export function LineChartHighlight({
 
   const { isActive } = useLineChart();
 
+  const smoothData = React.useMemo(() => (sData || data), [sData, data]);
+  
   ////////////////////////////////////////////////
 
   const smoothedPath = React.useMemo(() => {
-    if (data && data.length > 0) {
-      const radius = smoothDataRadius ? smoothDataRadius : 0.5;
+    if (smoothData && smoothData.length > 0) {
       const bPath = findPath({
-        from, to, fromData: data[from].smoothedValue, toData: data[to].smoothedValue, totalLength: data.length, data: '',
+        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
         index: 0,
         meta: {
           pathWidth: pathWidth,
@@ -62,9 +67,9 @@ export function LineChartHighlight({
         return bPath.data
       }
       const result = getPath({
-        data: smoothData(data, radius),
-        from,
-        to,
+        data: smoothData_(smoothData),
+        from: sFrom,
+        to: sTo,
         width: pathWidth,
         height,
         gutter,
@@ -74,7 +79,7 @@ export function LineChartHighlight({
         isOriginalData: false,
       });
       addPath({
-        from, to, fromData: data[from].smoothedValue, toData: data[to].smoothedValue, totalLength: data.length, data: result,
+        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
         index: 0,
         meta: {
           pathWidth: pathWidth,
@@ -88,7 +93,7 @@ export function LineChartHighlight({
     }
     return '';
   }, [
-    data,
+    smoothData,
     smoothDataRadius,
     pathWidth,
     height,

@@ -5,7 +5,7 @@ import * as d3Shape from 'd3-shape';
 import { Dimensions, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path, parse } from 'react-native-redash';
-import { addPath, findPath, getArea, getPath, smoothData } from './utils';
+import { addPath, findPath, getArea, getPath, smoothData_ } from './utils';
 
 import { LineChartContext } from './Context';
 import { runOnJS, useDerivedValue } from 'react-native-reanimated';
@@ -65,7 +65,7 @@ export function LineChart({
   ...props
 }: LineChartProps) {
   const { yDomain, xLength, xDomain, isActive } = React.useContext(LineChartContext);
-  const { data } = useLineChartData({
+  const { data, sData } = useLineChartData({
     id,
   });
 
@@ -73,6 +73,8 @@ export function LineChart({
   const [updateContext, setUpdateContext] = React.useState(0);
   const pathBuffer = React.useRef([]);
   const areaBuffer = React.useRef([]);
+
+  const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   useDerivedValue(() => {
     console.log(isLiveData, isActive.value);
@@ -97,10 +99,9 @@ export function LineChart({
   }, [data.length, width, xLength]);
 
   const smoothedPath = React.useMemo(() => {
-    if (data && data.length > 0) {
-      const radius = smoothDataRadius ? smoothDataRadius : 0.5;
+    if (smoothData && smoothData.length > 0) {
       const bPath = findPath({
-        from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: '',
+        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: '',
         index: 0,
         meta: {
           pathWidth: pathWidth,
@@ -115,7 +116,7 @@ export function LineChart({
         return bPath.data
       }
       const result = getPath({
-        data: smoothData(data, radius),
+        data: smoothData_(smoothData),
         width: pathWidth,
         height,
         gutter: yGutter,
@@ -124,9 +125,9 @@ export function LineChart({
         xDomain,
         isOriginalData: false,
       });
-      if (typeof data[data.length - 1].smoothedValue === 'number' && typeof data[0].smoothedValue === 'number')
+      if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
         addPath({
-          from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: result,
+          from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: result,
           index: 0,
           meta: {
             pathWidth: pathWidth,
@@ -140,7 +141,7 @@ export function LineChart({
     }
     return '';
   }, [
-    data,
+    smoothData,
     smoothDataRadius,
     pathWidth,
     height,
@@ -171,11 +172,10 @@ export function LineChart({
   }, [height, yGutter, shape, update]);
 
   const smoothedArea = React.useMemo(() => {
-    if (data && data.length > 0) {
-      const radius = smoothDataRadius ? smoothDataRadius : 0.5;
+    if (smoothData && smoothData.length > 0) {
       // console.log('getArea !!', pathWidth, height, yGutter, shape, yDomain,)
       const bPath = findPath({
-        from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: '',
+        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: '',
         index: 0,
         meta: {
           pathWidth: pathWidth,
@@ -189,7 +189,7 @@ export function LineChart({
         return bPath.data
       }
       const result = getArea({
-        data: smoothData(data, radius),
+        data: smoothData_(smoothData),
         width: pathWidth,
         height,
         gutter: yGutter,
@@ -197,9 +197,9 @@ export function LineChart({
         yDomain,
         isOriginalData: false,
       });
-      if (typeof data[data.length - 1].smoothedValue === 'number' && typeof data[0].smoothedValue === 'number')
+      if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
         addPath({
-          from: 0, to: data.length - 1, fromData: data[0].smoothedValue, toData: data[data.length - 1].smoothedValue, totalLength: data.length, data: result,
+          from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: result,
           index: 0,
           meta: {
             pathWidth: pathWidth,
@@ -211,7 +211,7 @@ export function LineChart({
       return result
     }
     return '';
-  }, [data, pathWidth, height, yGutter, shape, yDomain, smoothDataRadius]);
+  }, [smoothData, pathWidth, height, yGutter, shape, yDomain, smoothDataRadius]);
 
   const area = React.useMemo(() => {
     if (update === 0 || (!isActive.value && isLiveData)) return smoothedArea

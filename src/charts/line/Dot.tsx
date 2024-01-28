@@ -25,6 +25,7 @@ export type LineChartDotProps = {
   inactiveColor?: string;
   showInactiveColor?: boolean;
   at: number;
+  sAt?: number;
   size?: number;
   hasPulse?: boolean;
   hasOuterDot?: boolean;
@@ -47,6 +48,7 @@ LineChartDot.displayName = 'LineChartDot';
 
 export function LineChartDot({
   at,
+  sAt = at,
   color: defaultColor = 'black',
   dotProps,
   hasOuterDot: defaultHasOuterDot = false,
@@ -73,8 +75,8 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-    return withTiming(getXPositionForCurve(isActive.value ? parsedPath : smoothedParsedPath, at));
-  }, [at, parsedPath, smoothedParsedPath]);
+    return withTiming(getXPositionForCurve(isActive.value ? parsedPath : smoothedParsedPath, isActive.value ? at : sAt));
+  }, [at, sAt, parsedPath, smoothedParsedPath]);
 
   const y = useDerivedValue(
     () => withTiming(getYForX((isActive.value ? parsedPath : smoothedParsedPath)!, x.value) || 0),

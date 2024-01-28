@@ -2,17 +2,17 @@
 import smoothish from 'smoothish';
 import type { LineChartArea, LineChartAreaBuffer, LineChartPath, LineChartPathBuffer, TLineChartData, TLineChartPoint } from '../types';
 
-export const smoothData = (data: TLineChartData, radius: number) => {
-  let values = data.map((item: TLineChartPoint) => item.value);
-  const smoothed = smoothish(values, { radius: 2 });
+export const smoothData_ = (data: TLineChartData) => {
+  //let values = data.map((item: TLineChartPoint) => item.value);
+  // const smoothed = smoothish(values, { radius: 2 });
   data.forEach(function (item: TLineChartPoint, i: number) {
-    item.smoothedValue = smoothed[i];
+    item.smoothedValue = item.value
   });
   return data;
 };
 
-export const findPath = (data: LineChartPath | LineChartArea, buffer: LineChartPathBuffer | LineChartAreaBuffer) => {
-  if (typeof data.fromData !== 'number' || typeof data.toData !== 'number') return
+export const findPath = (data: LineChartPath | LineChartArea, buffer: LineChartPathBuffer | LineChartAreaBuffer | null) => {
+  if (typeof data.fromData !== 'number' || typeof data.toData !== 'number' || buffer === null) return
   const meta = JSON.stringify(data.meta)
   
   const item = buffer.find((a) => typeof a.fromData === 'number' && typeof a.toData === 'number' && a.from === data.from && a.to === data.to && a.fromData === Number(data.fromData.toFixed(2)) &&
@@ -20,8 +20,8 @@ export const findPath = (data: LineChartPath | LineChartArea, buffer: LineChartP
   return item;
 };
 
-export const addPath = (data: LineChartPath | LineChartArea, buffer: LineChartPathBuffer | LineChartAreaBuffer) => {
-  if (typeof data.fromData !== 'number' || typeof data.toData !== 'number') return
+export const addPath = (data: LineChartPath | LineChartArea, buffer: LineChartPathBuffer | LineChartAreaBuffer | null) => {
+  if (typeof data.fromData !== 'number' || typeof data.toData !== 'number' || buffer === null) return
   const meta = JSON.stringify(data.meta)
 
   const index = buffer.findIndex((a) => a.from === data.from && a.to === data.to && a.fromData === Number(data.fromData.toFixed(2)) &&

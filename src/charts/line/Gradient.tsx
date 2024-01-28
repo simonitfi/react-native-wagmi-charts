@@ -6,7 +6,7 @@ import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import useAnimatedPath from './useAnimatedPath';
 import { useLineChart } from "./useLineChart";
-import { addPath, findPath, getArea, smoothData } from 'react-native-wagmi-charts/src/charts/line/utils';
+import { addPath, findPath, getArea, smoothData_ } from 'react-native-wagmi-charts/src/charts/line/utils';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -14,6 +14,8 @@ export type LineChartGradientProps = Animated.AnimateProps<PathProps> & {
   color?: string;
   from?: number;
   to?: number;
+  sFrom?: number;
+  sTo?: number;
   opacityValues?: Array<number>;
   children?: React.ReactNode;
 };
@@ -26,6 +28,8 @@ export function LineChartGradient({
   color: overrideColor = undefined,
   from = 0,
   to = -1,
+  sFrom = 0,
+  sTo = -1,
   opacityValues,
   children,
 
@@ -36,12 +40,15 @@ export function LineChartGradient({
     React.useContext(LineChartPathContext);
   const { isActive } = useLineChart();
 
-  const { data, yDomain, xDomain } = useLineChart();
+  const { data, sData, yDomain, xDomain } = useLineChart();
   const { area: area_, smoothedArea: smoothedArea_, pathWidth, height, gutter, shape, smoothDataRadius, update, isLiveData, areaBuffer } = React.useContext(
     LineChartDimensionsContext
   );
+  
+  const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   if (to < 0) to = data.length - 1
+  if (sTo < 0) sTo = smoothData.length - 1
 
   const color = overrideColor || contextColor;
 
@@ -51,11 +58,10 @@ export function LineChartGradient({
   const o4 = opacityValues && opacityValues[3]
 
   const smoothedArea = React.useMemo(() => {
-    if (from === 0 && to === data.length - 1) return smoothedArea_
-    if (data && data.length > 0) {
-      const radius = smoothDataRadius ? smoothDataRadius : 0.5;
+    if (from === 0 && to === smoothData.length - 1) return smoothedArea_
+    if (smoothData && smoothData.length > 0) {
       const bPath = findPath({
-        from, to, fromData: data[from].smoothedValue, toData: data[to].smoothedValue, totalLength: data.length, data: '',
+        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
         index: 0,
         meta: {
           pathWidth: pathWidth,
@@ -71,9 +77,9 @@ export function LineChartGradient({
         return bPath.data
       }
       const result = getArea({
-        data: smoothData(data, radius),
-        from,
-        to,
+        data: smoothData_(smoothData),
+        from: sFrom,
+        to: sTo,
         width: pathWidth,
         height,
         gutter,
@@ -83,7 +89,7 @@ export function LineChartGradient({
         isOriginalData: false,
       });
       addPath({
-        from, to, fromData: data[from].smoothedValue, toData: data[to].smoothedValue, totalLength: data.length, data: result,
+        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
         index: 0,
         meta: {
           pathWidth: pathWidth,
@@ -97,7 +103,7 @@ export function LineChartGradient({
     }
     return '';
   }, [
-    data,
+    smoothData,
     smoothDataRadius,
     pathWidth,
     height,
