@@ -147,15 +147,15 @@ export function LineChartTooltip({
     const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
     const minVal = xDomain ? data[minIndex].timestamp : minIndex
     const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
-    
+  /*  
     if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
       opacity = 0
     }
-/*
+*/
     if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
       opacity = 0
     }
-*/
+
 
     return {
       transform: [

@@ -26,6 +26,7 @@ export const LineChartContext = React.createContext<TLineChartContext>({
 type LineChartProviderProps = {
   children: React.ReactNode;
   data: TLineChartDataProp;
+  sData?: TLineChartDataProp;
   yRange?: YRangeProp;
   onCurrentIndexChange?: (x: number) => void;
   xLength?: number;
@@ -38,6 +39,7 @@ LineChartProvider.displayName = 'LineChartProvider';
 export function LineChartProvider({
   children,
   data = [],
+  sData = [],
   yRange,
   onCurrentIndexChange,
   xLength,
@@ -103,7 +105,7 @@ export function LineChartProvider({
   );
 
   return (
-    <LineChartDataProvider data={data}>
+    <LineChartDataProvider data={data} sData={sData}>
       <LineChartContext.Provider value={contextValue}>
         {children}
       </LineChartContext.Provider>

@@ -15,7 +15,8 @@ export type LineChartDataContext = {
 };
 
 const LineChartDataContext = createContext<LineChartDataContext>({
-  data: { [DefaultLineChartId]: [] }
+  data: { [DefaultLineChartId]: [] },
+  sData: { [DefaultLineChartId]: [] }
 });
 
 export type LineChartDataProviderProps = {

@@ -76,6 +76,8 @@ export function LineChart({
 
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
+  //console.log(sData, data)
+
   useDerivedValue(() => {
     console.log(isLiveData, isActive.value);
     if (isLiveData) runOnJS(setUpdate)(Date.now())
@@ -173,7 +175,7 @@ export function LineChart({
 
   const smoothedArea = React.useMemo(() => {
     if (smoothData && smoothData.length > 0) {
-      // console.log('getArea !!', pathWidth, height, yGutter, shape, yDomain,)
+      console.log('getArea smoothedArea', height, yGutter, shape, yDomain, xDomain, update)
       const bPath = findPath({
         from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: '',
         index: 0,
@@ -181,7 +183,8 @@ export function LineChart({
           pathWidth: pathWidth,
           height: height,
           gutter: yGutter,
-          yDomain
+          yDomain,
+          xDomain,
         }
       }, areaBuffer.current)
       if (bPath) {
@@ -195,6 +198,7 @@ export function LineChart({
         gutter: yGutter,
         shape,
         yDomain,
+        xDomain,
         isOriginalData: false,
       });
       if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
@@ -205,7 +209,8 @@ export function LineChart({
             pathWidth: pathWidth,
             height: height,
             gutter: yGutter,
-            yDomain
+            yDomain,
+            xDomain,
           }
         }, areaBuffer.current)
       return result
@@ -216,7 +221,7 @@ export function LineChart({
   const area = React.useMemo(() => {
     if (update === 0 || (!isActive.value && isLiveData)) return smoothedArea
     if (data && data.length > 0) {
-      // console.log('getArea',height, yGutter, shape, yDomain, xDomain, update)
+      console.log('getArea',height, yGutter, shape, yDomain, xDomain, update)
       return getArea({
         data,
         width: pathWidth,
