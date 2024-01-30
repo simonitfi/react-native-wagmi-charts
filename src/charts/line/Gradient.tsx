@@ -41,14 +41,11 @@ export function LineChartGradient({
   const { isActive } = useLineChart();
 
   const { data, sData, yDomain, xDomain } = useLineChart();
-  const { area: area_, smoothedArea: smoothedArea_, pathWidth, height, gutter, shape, smoothDataRadius, update, isLiveData, areaBuffer } = React.useContext(
+  const { pathWidth, height, gutter, shape, smoothDataRadius, update, isLiveData, areaBuffer } = React.useContext(
     LineChartDimensionsContext
   );
   
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
-
-  if (to < 0) to = data.length - 1
-  if (sTo < 0) sTo = smoothData.length - 1
 
   const color = overrideColor || contextColor;
 
@@ -57,9 +54,11 @@ export function LineChartGradient({
   const o3 = opacityValues && opacityValues[2]
   const o4 = opacityValues && opacityValues[3]
 
+  if (sTo < 0) sTo = smoothData.length - 1
+  if (to < 0) to = data.length - 1
+
   const smoothedArea = React.useMemo(() => {
-    if (from === 0 && to === smoothData.length - 1) return smoothedArea_
-    if (smoothData && smoothData.length > 0) {
+    if (smoothData && smoothData.length) {
       const bPath = findPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
         index: 0,
@@ -77,7 +76,7 @@ export function LineChartGradient({
         return bPath.data
       }
       const result = getArea({
-        data: smoothData_(smoothData),
+        data: smoothData, // smoothData_(smoothData),
         from: sFrom,
         to: sTo,
         width: pathWidth,
@@ -114,10 +113,11 @@ export function LineChartGradient({
   ]);
 
   const area = React.useMemo(() => {
-    if (from === 0 && to === data.length - 1) return area_
-    if (update === 0 || (!isActive.value && isLiveData)) return smoothedArea
+    console.log('getArea HIGHLIGHT',height, gutter, shape, yDomain, xDomain, update)
+    if (update === 0) return smoothedArea
+    //if ((!isActive.value && isLiveData)) return ''
+
     if (data && data.length > 0) {
-      // console.log('getPath HIGHLIGHT',height, gutter, shape, yDomain, xDomain, update)
       return getArea({
         data,
         from,
@@ -138,8 +138,8 @@ export function LineChartGradient({
 
   const { animatedProps } = useAnimatedPath({
     enabled: isTransitionEnabled,
-    path: (update === 0 || (!isActive.value)) ? (from === 0 && to === data.length - 1) ? smoothedArea_ : smoothedArea : (from === 0 && to === data.length - 1) ? area_ : area,
-    smoothedPath: (from === 0 && to === data.length - 1) ? smoothedArea_ : smoothedArea,
+    path: area,
+    smoothedPath: smoothedArea,
     isActive,
   });
 

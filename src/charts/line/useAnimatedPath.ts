@@ -1,3 +1,4 @@
+import * as React from 'react';
 import {
   useAnimatedProps,
   useAnimatedReaction,
@@ -7,6 +8,7 @@ import {
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
 import { interpolatePath } from './utils';
 import { usePrevious } from '../../utils';
+import { LineChartDimensionsContext } from 'react-native-wagmi-charts/src/charts/line/Chart';
 
 export default function useAnimatedPath({
   enabled = true,
@@ -19,6 +21,9 @@ export default function useAnimatedPath({
   smoothedPath: string;
   isActive: SharedValue<boolean>;
 }) {
+  const { isLiveData, update } = React.useContext(
+    LineChartDimensionsContext
+  );
   const transition = useSharedValue(0);
 
   const currentPath = useSharedValue(smoothedPath);
@@ -26,7 +31,7 @@ export default function useAnimatedPath({
 
   useAnimatedReaction(
     () => {
-      currentPath.value = isActive.value ? path : smoothedPath;
+      currentPath.value = (update === 0 || (!isActive.value && isLiveData)) ? smoothedPath : path;
       return currentPath.value;
     },
     (result, previous) => {

@@ -51,7 +51,7 @@ export function LineChartTooltip({
   format,
   ...props
 }: LineChartTooltipProps) {
-  const { width, height, parsedPath, pointWidth } = React.useContext(
+  const { width, height, parsedPath, smoothedParsedPath, isLiveData, update } = React.useContext(
     LineChartDimensionsContext
   );
   const { type } = React.useContext(CursorContext);
@@ -73,21 +73,23 @@ export function LineChartTooltip({
   // When the user set a `at` index, get the index's y & x positions
   const atXPosition = useMemo(
     () => {
-      const at_ = isActive.value ? at : sAt
+      const parsedPath_ = (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath
+      const at_ = (update === 0 || (!isActive.value && isLiveData)) ? sAt : at
       const result = at_ !== null && at_ !== undefined
-        ? at === 0
+        ? at_ === 0
           ? 0
-          : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x
+          : parsedPath_.curves[Math.min(at_, parsedPath_.curves.length) - 1].to.x
         : undefined
       return result
     },
-    [at, sAt, parsedPath.curves]
+    [at, sAt, parsedPath.curves, smoothedParsedPath.curves]
   );
 
   const atYPosition = useDerivedValue(() => {
+    const parsedPath_ = (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath
     return atXPosition == null
       ? undefined
-      : getYForX(parsedPath, atXPosition) ?? 0;
+      : getYForX(parsedPath_, atXPosition) ?? 0;
   }, [atXPosition]);
 
   const animatedCursorStyle = useAnimatedStyle(() => {

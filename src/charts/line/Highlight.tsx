@@ -67,7 +67,7 @@ export function LineChartHighlight({
         return bPath.data
       }
       const result = getPath({
-        data: smoothData_(smoothData),
+        data: smoothData, // smoothData_(smoothData),
         from: sFrom,
         to: sTo,
         width: pathWidth,
@@ -125,7 +125,7 @@ export function LineChartHighlight({
 
   const { animatedProps } = useAnimatedPath({
     enabled: isTransitionEnabled,
-    path: (update === 0 || (!isActive.value)) ? smoothedPath : path,
+    path: path,
     smoothedPath: smoothedPath,
     isActive,
   });

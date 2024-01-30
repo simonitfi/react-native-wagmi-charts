@@ -5,10 +5,10 @@ import * as d3Shape from 'd3-shape';
 import { Dimensions, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path, parse } from 'react-native-redash';
-import { addPath, findPath, getArea, getPath, smoothData_ } from './utils';
+import { addPath, findPath, getPath, smoothData_ } from './utils';
 
 import { LineChartContext } from './Context';
-import { runOnJS, useDerivedValue } from 'react-native-reanimated';
+import { runOnJS, useAnimatedReaction, useDerivedValue } from 'react-native-reanimated';
 import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 
 export const LineChartDimensionsContext = React.createContext({
@@ -19,8 +19,6 @@ export const LineChartDimensionsContext = React.createContext({
   path: '',
   smoothedParsedPath: {} as Path,
   smoothedPath: '',
-  area: '',
-  smoothedArea: '',
   shape: d3Shape.curveBumpX,
   gutter: 0,
   pathWidth: 0,
@@ -74,23 +72,46 @@ export function LineChart({
   const pathBuffer = React.useRef([]);
   const areaBuffer = React.useRef([]);
 
+  const round = React.useRef(0);
+
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
-  //console.log(sData, data)
-
   useDerivedValue(() => {
-    console.log(isLiveData, isActive.value);
+    let dum = 0
+    if (isActive.value)  dum = 1
     if (isLiveData) runOnJS(setUpdate)(Date.now())
     else runOnJS(setUpdateContext)(Date.now())
   }, []); // No need to pass dependencies
 
-  console.log('RENDER', isLiveData, update, (update === 0 || (!isActive.value)), updateContext, data.length)
+  /*
+  useAnimatedReaction(
+    () => {
+      console.log('GGGGGGGGGGGGGGGGGG', isActive.value)
+      return isActive.value
+    },
+    (shouldHide) => {
+      if (shouldHide) {
+        console.log('GGGGGGGGGGGGGGGGGG')
+      }
+    },
+  );*/
+
+  //console.log('RENDER', isLiveData, update, (update === 0 || (!isActive.value && isLiveData)), updateContext)
 
   React.useEffect(() => {
-    const timeout = setTimeout(() => {
-      setUpdate(Date.now())
-    }, 1500)
+    console.log('is rendered once')
+    round.current++
   }, []);
+
+  React.useEffect(() => {
+    console.log('is rendered', round.current, isLiveData)
+    round.current++
+    if (round.current === 2){
+      const timeout = setTimeout(() => {
+        setUpdate(Date.now())
+      }, 100)
+    }
+  });
 
   const pathWidth = React.useMemo(() => {
     let allowedWidth = width;
@@ -118,7 +139,7 @@ export function LineChart({
         return bPath.data
       }
       const result = getPath({
-        data: smoothData_(smoothData),
+        data: smoothData,//smoothData_(smoothData),
         width: pathWidth,
         height,
         gutter: yGutter,
@@ -173,73 +194,8 @@ export function LineChart({
     return '';
   }, [height, yGutter, shape, update]);
 
-  const smoothedArea = React.useMemo(() => {
-    if (smoothData && smoothData.length > 0) {
-      console.log('getArea smoothedArea', height, yGutter, shape, yDomain, xDomain, update)
-      const bPath = findPath({
-        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: '',
-        index: 0,
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: yGutter,
-          yDomain,
-          xDomain,
-        }
-      }, areaBuffer.current)
-      if (bPath) {
-        console.log('FOUND OLD ONE #')
-        return bPath.data
-      }
-      const result = getArea({
-        data: smoothData_(smoothData),
-        width: pathWidth,
-        height,
-        gutter: yGutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: false,
-      });
-      if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
-        addPath({
-          from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: result,
-          index: 0,
-          meta: {
-            pathWidth: pathWidth,
-            height: height,
-            gutter: yGutter,
-            yDomain,
-            xDomain,
-          }
-        }, areaBuffer.current)
-      return result
-    }
-    return '';
-  }, [smoothData, pathWidth, height, yGutter, shape, yDomain, smoothDataRadius]);
-
-  const area = React.useMemo(() => {
-    if (update === 0 || (!isActive.value && isLiveData)) return smoothedArea
-    if (data && data.length > 0) {
-      console.log('getArea',height, yGutter, shape, yDomain, xDomain, update)
-      return getArea({
-        data,
-        width: pathWidth,
-        height,
-        gutter: yGutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: true,
-      });
-    }
-    return '';
-  }, [height, yGutter, shape, update]);
-
   const dataLength = data.length;
   const smoothedParsedPath = React.useMemo(() => {
-    //console.log('¤¤¤¤¤¤¤¤¤¤smoothedParsedPath')
-    // console.log('getPath', height, yGutter, shape, yDomain, xDomain, update)
     return parse(smoothedPath)
   }, [smoothedPath]);
   const parsedPath = React.useMemo(() => parse(path), [update]);
@@ -252,12 +208,10 @@ export function LineChart({
   const contextValue = React.useMemo(
     () => ({
       gutter: yGutter,
-      parsedPath: (update === 0 || (!isActive.value)) ? smoothedParsedPath : parsedPath,
+      parsedPath: (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath,
       smoothedParsedPath,
       pointWidth,
-      area: (update === 0 || (!isActive.value)) ? smoothedArea : area,
-      smoothedArea,
-      path: (update === 0 || (!isActive.value)) ? smoothedPath : path,
+      path: (update === 0 || (!isActive.value && isLiveData)) ? smoothedPath : path,
       smoothedPath,
       width,
       height,
@@ -275,8 +229,6 @@ export function LineChart({
       parsedPath,
       smoothedParsedPath,
       pointWidth,
-      area,
-      smoothedArea,
       path,
       smoothedPath,
       width,

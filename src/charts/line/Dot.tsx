@@ -4,6 +4,7 @@ import Animated, {
   Easing,
   useAnimatedProps,
   useDerivedValue,
+  useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
@@ -62,7 +63,7 @@ export function LineChartDot({
   outerSize = size * 4,
 }: LineChartDotProps) {
   const { isActive } = useLineChart();
-  const { parsedPath, smoothedParsedPath } = React.useContext(LineChartDimensionsContext);
+  const { parsedPath, smoothedParsedPath, update, isLiveData } = React.useContext(LineChartDimensionsContext);
 
   ////////////////////////////////////////////////////////////
 
@@ -75,12 +76,15 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-    return withTiming(getXPositionForCurve(isActive.value ? parsedPath : smoothedParsedPath, isActive.value ? at : sAt));
-  }, [at, sAt, parsedPath, smoothedParsedPath]);
+    return withTiming(getXPositionForCurve((update !== 0 && !isLiveData) ? parsedPath : smoothedParsedPath, (update !== 0 && !isLiveData) ? at : sAt));
+  }, [at, sAt, parsedPath, smoothedParsedPath, isLiveData, update]);
 
   const y = useDerivedValue(
-    () => withTiming(getYForX((isActive.value ? parsedPath : smoothedParsedPath)!, x.value) || 0),
-    [parsedPath, smoothedParsedPath, x]
+    () => {
+      if (update === 0) return getYForX(((update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath)!, x.value) || 0
+      return withTiming(getYForX(((update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath)!, x.value) || 0)}
+      ,
+    [parsedPath, smoothedParsedPath, x, isLiveData]
   );
 
   ////////////////////////////////////////////////////////////
