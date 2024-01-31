@@ -41,7 +41,7 @@ export function LineChartGradient({
   const { isActive } = useLineChart();
 
   const { data, sData, yDomain, xDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape, smoothDataRadius, update, isLiveData, areaBuffer } = React.useContext(
+  const { pathWidth, height, gutter, shape, smoothDataRadius, update, forcePathUpdate, areaBuffer } = React.useContext(
     LineChartDimensionsContext
   );
   
@@ -58,7 +58,7 @@ export function LineChartGradient({
   if (to < 0) to = data.length - 1
 
   const smoothedArea = React.useMemo(() => {
-    if (smoothData && smoothData.length) {
+    if (smoothData && smoothData.length && sTo < smoothData.length) {
       const bPath = findPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
         index: 0,
@@ -72,7 +72,6 @@ export function LineChartGradient({
       }, areaBuffer.current)
 
       if (bPath) {
-        console.log('AREA FOUND OLD ONE')
         return bPath.data
       }
       const result = getArea({
@@ -104,6 +103,8 @@ export function LineChartGradient({
   }, [
     smoothData,
     smoothDataRadius,
+    sFrom,
+    sTo,
     pathWidth,
     height,
     gutter,
@@ -113,10 +114,7 @@ export function LineChartGradient({
   ]);
 
   const area = React.useMemo(() => {
-    console.log('getArea HIGHLIGHT',height, gutter, shape, yDomain, xDomain, update)
     if (update === 0) return smoothedArea
-    //if ((!isActive.value && isLiveData)) return ''
-
     if (data && data.length > 0) {
       return getArea({
         data,
@@ -132,7 +130,7 @@ export function LineChartGradient({
       });
     }
     return '';
-  }, [height, gutter, shape, update]);
+  }, [height, gutter, shape, update, forcePathUpdate]);
 
   ////////////////////////////////////////////////
 

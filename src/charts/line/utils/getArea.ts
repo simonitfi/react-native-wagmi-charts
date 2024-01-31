@@ -41,7 +41,6 @@ export function getArea({
   for (let i = 0; i < data.length; ++i) {
     timestamps[i] = xDomain ? data[i].timestamp : i;
   }
-  const now = Date.now()
   const scaleX = scaleLinear()
     .domain(xDomain ?? [Math.min(...timestamps), Math.max(...timestamps)])
     .range([0, width]);
@@ -60,7 +59,5 @@ export function getArea({
     .y0((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
     .y1(() => height)
     .curve(_shape)(data);
-    const res = Date.now() - now
-    console.log('CURVE MEASURE getArea', res, isOriginalData)
   return area;
 }

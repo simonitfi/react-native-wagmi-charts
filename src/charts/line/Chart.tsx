@@ -27,7 +27,8 @@ export const LineChartDimensionsContext = React.createContext({
   isLiveData: false,
   updateContext: 0,
   pathBuffer: {} as React.RefObject<LineChartPathBuffer>,
-  areaBuffer: {} as React.RefObject<LineChartAreaBuffer>
+  areaBuffer: {} as React.RefObject<LineChartAreaBuffer>,
+  forcePathUpdate: 0
 });
 
 
@@ -44,6 +45,7 @@ type LineChartProps = ViewProps & {
   absolute?: boolean;
   smoothDataRadius?: number;
   isLiveData?: boolean;
+  forcePathUpdate?: boolean;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -60,6 +62,7 @@ export function LineChart({
   absolute,
   smoothDataRadius,
   isLiveData = false,
+  forcePathUpdate,
   ...props
 }: LineChartProps) {
   const { yDomain, xLength, xDomain, isActive } = React.useContext(LineChartContext);
@@ -83,28 +86,11 @@ export function LineChart({
     else runOnJS(setUpdateContext)(Date.now())
   }, []); // No need to pass dependencies
 
-  /*
-  useAnimatedReaction(
-    () => {
-      console.log('GGGGGGGGGGGGGGGGGG', isActive.value)
-      return isActive.value
-    },
-    (shouldHide) => {
-      if (shouldHide) {
-        console.log('GGGGGGGGGGGGGGGGGG')
-      }
-    },
-  );*/
-
-  //console.log('RENDER', isLiveData, update, (update === 0 || (!isActive.value && isLiveData)), updateContext)
-
   React.useEffect(() => {
-    console.log('is rendered once')
     round.current++
   }, []);
 
   React.useEffect(() => {
-    console.log('is rendered', round.current, isLiveData)
     round.current++
     if (round.current === 2){
       const timeout = setTimeout(() => {
@@ -124,7 +110,9 @@ export function LineChart({
   const smoothedPath = React.useMemo(() => {
     if (smoothData && smoothData.length > 0) {
       const bPath = findPath({
-        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: '',
+        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
+        fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp,
+        totalLength: smoothData.length, data: '',
         index: 0,
         meta: {
           pathWidth: pathWidth,
@@ -135,7 +123,6 @@ export function LineChart({
         }
       }, pathBuffer.current)
       if (bPath) {
-        console.log('FOUND OLD ONE #')
         return bPath.data
       }
       const result = getPath({
@@ -150,7 +137,9 @@ export function LineChart({
       });
       if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
         addPath({
-          from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue, totalLength: smoothData.length, data: result,
+          from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
+          fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp,
+          totalLength: smoothData.length, data: result,
           index: 0,
           meta: {
             pathWidth: pathWidth,
@@ -179,7 +168,6 @@ export function LineChart({
       return smoothedPath
     }
     if (data && data.length > 0) {
-      // console.log('getPath',height, yGutter, shape, yDomain, xDomain, update)
       return getPath({
         data,
         width: pathWidth,
@@ -192,7 +180,7 @@ export function LineChart({
       });
     }
     return '';
-  }, [height, yGutter, shape, update]);
+  }, [height, yGutter, shape, update, forcePathUpdate]);
 
   const dataLength = data.length;
   const smoothedParsedPath = React.useMemo(() => {
@@ -222,7 +210,8 @@ export function LineChart({
       isLiveData,
       updateContext,
       pathBuffer,
-      areaBuffer
+      areaBuffer,
+      forcePathUpdate
     }),
     [
       yGutter,

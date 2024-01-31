@@ -43,6 +43,7 @@ export type LineChartDotProps = {
    */
   outerSize?: number;
   pulseDurationMs?: number;
+  forceUpdate?: number;
 };
 
 LineChartDot.displayName = 'LineChartDot';
@@ -61,6 +62,7 @@ export function LineChartDot({
   showInactiveColor = true,
   size = 4,
   outerSize = size * 4,
+  forceUpdate,
 }: LineChartDotProps) {
   const { isActive } = useLineChart();
   const { parsedPath, smoothedParsedPath, update, isLiveData } = React.useContext(LineChartDimensionsContext);
@@ -76,8 +78,8 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-    return withTiming(getXPositionForCurve((update !== 0 && !isLiveData) ? parsedPath : smoothedParsedPath, (update !== 0 && !isLiveData) ? at : sAt));
-  }, [at, sAt, parsedPath, smoothedParsedPath, isLiveData, update]);
+      return withTiming(getXPositionForCurve((update !== 0 && !isLiveData) ? parsedPath : smoothedParsedPath, (update !== 0 && !isLiveData) ? at : sAt));
+  }, [at, sAt, parsedPath, smoothedParsedPath, isLiveData, update, forceUpdate]);
 
   const y = useDerivedValue(
     () => {

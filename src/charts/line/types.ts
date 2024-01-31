@@ -38,6 +38,8 @@ export type LineChartPath = {
   to: number;
   fromData: number;
   toData: number;
+  fromTime?: number;
+  toTime?: number;
   totalLength: number;
   data: string;
   meta: {
@@ -57,6 +59,8 @@ export type LineChartArea = {
   to: number;
   fromData: number;
   toData: number;
+  fromTime?: number;
+  toTime?: number;
   totalLength: number;
   data: string;
   meta: {
