@@ -86,10 +86,15 @@ export function LineChartTooltip({
   );
 
   const atYPosition = useDerivedValue(() => {
-    const parsedPath_ = (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath
-    return atXPosition == null
-      ? undefined
-      : getYForX(parsedPath_, atXPosition) ?? 0;
+    const p = (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath
+    if (atXPosition == null) return undefined
+    let val = getYForX(p, atXPosition)
+    if (val === null) {
+      let maxPoint = p.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, p.curves[0].to);
+      val = maxPoint.y;
+      console.log('¤¤¤¤     ¤¤¤¤¤¤ ', val, x.value)
+    }
+    return val || 0
   }, [atXPosition]);
 
   const animatedCursorStyle = useAnimatedStyle(() => {
@@ -145,15 +150,15 @@ export function LineChartTooltip({
     const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
     const minIndex = data.findIndex((element: { value: null; }) => element.value !== null);
     const maxIndex = minIndex !== 0 || data.findIndex((element: { value: null; }) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element: { value: null; }) => element.value === null) - 1;
-    
+
     const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
     const minVal = xDomain ? data[minIndex].timestamp : minIndex
     const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
-  /*  
-    if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
-      opacity = 0
-    }
-*/
+    /*  
+      if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
+        opacity = 0
+      }
+  */
     if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
       opacity = 0
     }

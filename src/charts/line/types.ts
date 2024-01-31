@@ -33,13 +33,13 @@ export type YDomain = {
 };
 
 export type LineChartPath = {
-  index: number;
   from: number;
   to: number;
   fromData: number;
   toData: number;
   fromTime?: number;
   toTime?: number;
+  timeTolerance?: number,
   totalLength: number;
   data: string;
   meta: {
@@ -54,13 +54,13 @@ export type LineChartPath = {
 export type LineChartPathBuffer = Array<LineChartPath>;
 
 export type LineChartArea = {
-  index: number;
   from: number;
   to: number;
   fromData: number;
   toData: number;
   fromTime?: number;
   toTime?: number;
+  timeTolerance?: number,
   totalLength: number;
   data: string;
   meta: {

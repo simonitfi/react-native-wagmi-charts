@@ -6,7 +6,7 @@ import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import useAnimatedPath from './useAnimatedPath';
 import { useLineChart } from './useLineChart';
-import { addPath, findPath, getPath, smoothData_ } from './utils';
+import { addPath, findPath, getPath } from './utils';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -52,7 +52,6 @@ export function LineChartHighlight({
     if (smoothData && smoothData.length > 0 && sTo < smoothData.length) {
       const bPath = findPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
-        index: 0,
         meta: {
           pathWidth: pathWidth,
           height: height,
@@ -79,7 +78,6 @@ export function LineChartHighlight({
       });
       addPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
-        index: 0,
         meta: {
           pathWidth: pathWidth,
           height: height,

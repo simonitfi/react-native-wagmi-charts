@@ -5,10 +5,10 @@ import * as d3Shape from 'd3-shape';
 import { Dimensions, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path, parse } from 'react-native-redash';
-import { addPath, findPath, getPath, smoothData_ } from './utils';
+import { addPath, findPathIndex, getPath } from './utils';
 
 import { LineChartContext } from './Context';
-import { runOnJS, useAnimatedReaction, useDerivedValue } from 'react-native-reanimated';
+import { runOnJS, useDerivedValue } from 'react-native-reanimated';
 import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 
 export const LineChartDimensionsContext = React.createContext({
@@ -72,8 +72,8 @@ export function LineChart({
 
   const [update, setUpdate] = React.useState(0);
   const [updateContext, setUpdateContext] = React.useState(0);
-  const pathBuffer = React.useRef([]);
-  const areaBuffer = React.useRef([]);
+  const pathBuffer = React.useRef<LineChartPathBuffer>([]);
+  const areaBuffer = React.useRef<LineChartAreaBuffer>([]);
 
   const round = React.useRef(0);
 
@@ -81,7 +81,7 @@ export function LineChart({
 
   useDerivedValue(() => {
     let dum = 0
-    if (isActive.value)  dum = 1
+    if (isActive.value) dum = 1
     if (isLiveData) runOnJS(setUpdate)(Date.now())
     else runOnJS(setUpdateContext)(Date.now())
   }, []); // No need to pass dependencies
@@ -92,7 +92,7 @@ export function LineChart({
 
   React.useEffect(() => {
     round.current++
-    if (round.current === 2){
+    if (round.current === 2) {
       const timeout = setTimeout(() => {
         setUpdate(Date.now())
       }, 100)
@@ -109,11 +109,10 @@ export function LineChart({
 
   const smoothedPath = React.useMemo(() => {
     if (smoothData && smoothData.length > 0) {
-      const bPath = findPath({
+      const bPathIndex = findPathIndex({
         from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
-        fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp,
+        fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
         totalLength: smoothData.length, data: '',
-        index: 0,
         meta: {
           pathWidth: pathWidth,
           height: height,
@@ -122,8 +121,10 @@ export function LineChart({
           xDomain
         }
       }, pathBuffer.current)
-      if (bPath) {
-        return bPath.data
+      if (bPathIndex > -1) {
+        const res = pathBuffer.current[bPathIndex].data
+        pathBuffer.current.splice(bPathIndex, 1);
+        return res
       }
       const result = getPath({
         data: smoothData,//smoothData_(smoothData),
@@ -136,19 +137,23 @@ export function LineChart({
         isOriginalData: false,
       });
       if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
-        addPath({
+        /*console.log('smoothedPath ADD', {
           from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
-          fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp,
-          totalLength: smoothData.length, data: result,
-          index: 0,
-          meta: {
-            pathWidth: pathWidth,
-            height: height,
-            gutter: yGutter,
-            yDomain,
-            xDomain
-          }
-        }, pathBuffer.current)
+          fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
+          totalLength: smoothData.length, data: ''
+        })*/
+      addPath({
+        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
+        fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
+        totalLength: smoothData.length, data: result,
+        meta: {
+          pathWidth: pathWidth,
+          height: height,
+          gutter: yGutter,
+          yDomain,
+          xDomain
+        }
+      }, pathBuffer.current)
       return result
     }
     return '';

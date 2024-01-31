@@ -14,7 +14,7 @@ import { Circle, CircleProps } from 'react-native-svg';
 import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import { getXPositionForCurve } from './utils/getXPositionForCurve';
-import { getYForX } from 'react-native-redash';
+import { getYForX, max } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -58,14 +58,14 @@ export function LineChartDot({
   inactiveColor,
   outerDotProps,
   pulseBehaviour = 'while-inactive',
-  pulseDurationMs = 800,
+  pulseDurationMs = 1200,
   showInactiveColor = true,
   size = 4,
-  outerSize = size * 4,
+  outerSize = size * 3.5,
   forceUpdate,
 }: LineChartDotProps) {
   const { isActive } = useLineChart();
-  const { parsedPath, smoothedParsedPath, update, isLiveData } = React.useContext(LineChartDimensionsContext);
+  const { parsedPath, smoothedParsedPath, update, isLiveData, width } = React.useContext(LineChartDimensionsContext);
 
   ////////////////////////////////////////////////////////////
 
@@ -78,85 +78,95 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-      return withTiming(getXPositionForCurve((update !== 0 && !isLiveData) ? parsedPath : smoothedParsedPath, (update !== 0 && !isLiveData) ? at : sAt));
-  }, [at, sAt, parsedPath, smoothedParsedPath, isLiveData, update, forceUpdate]);
+    return withTiming(Math.min(getXPositionForCurve((update !== 0 && !isLiveData) ? parsedPath : smoothedParsedPath, (update !== 0 && !isLiveData) ? at : sAt), width));
+  }, [at, sAt, parsedPath, smoothedParsedPath, isLiveData, update, width]);
 
   const y = useDerivedValue(
     () => {
-      if (update === 0) return getYForX(((update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath)!, x.value) || 0
-      return withTiming(getYForX(((update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath)!, x.value) || 0)}
-      ,
+      const p = ((update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath)
+      if (update === 0) return getYForX(p!, x.value) || 0
+      let val = getYForX(p!, x.value)
+      if (val === null) {
+        let maxPoint = p.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, p.curves[0].to);
+        val = maxPoint.y;
+      }
+      return withTiming(val || 0)
+    }
+    ,
     [parsedPath, smoothedParsedPath, x, isLiveData]
   );
 
   ////////////////////////////////////////////////////////////
-
-  const animatedDotProps = useAnimatedProps(
-    () => ({
-      cx: x.value,
-      cy: y.value,
-    }),
-    [x, y]
-  );
-
-  const animatedOuterDotProps = useAnimatedProps(() => {
-    let defaultProps = {
-      cx: x.value,
-      cy: y.value,
-      opacity: 0.1,
-      r: outerSize,
-    };
-
-    if (!hasPulse) {
-      return defaultProps;
-    }
-
-    if (isActive.value && pulseBehaviour === 'while-inactive') {
+  /*
+    const animatedDotProps = useAnimatedProps(
+      () => ({
+        cx: x.value,
+        cy: y.value,
+      }),
+      [x, y]
+    );
+  
+    const animatedOuterDotProps = useAnimatedProps(() => {
+      let defaultProps = {
+        cx: x.value,
+        cy: y.value,
+        opacity: 0.1,
+        r: outerSize,
+      };
+  
+      if (!hasPulse) {
+        return defaultProps;
+      }
+  
+      if (isActive.value && pulseBehaviour === 'while-inactive') {
+        return {
+          ...defaultProps,
+          r: 0,
+        };
+      }
+  
+      const easing = Easing.out(Easing.sin);
+      const animatedOpacity = withRepeat(
+        withSequence(
+          withTiming(0.8),
+          withTiming(0, {
+            duration: pulseDurationMs,
+            easing,
+          })
+        ),
+        -1,
+        false
+      );
+      const scale = withRepeat(
+        withSequence(
+          withTiming(0),
+          withTiming(outerSize, {
+            duration: pulseDurationMs,
+            easing,
+          })
+        ),
+        -1,
+        false
+      );
+  
+      if (pulseBehaviour === 'while-inactive') {
+        return {
+          ...defaultProps,
+          opacity: isActive.value ? withTiming(0) : animatedOpacity,
+          r: isActive.value ? withTiming(0) : scale,
+        };
+      }
       return {
         ...defaultProps,
-        r: 0,
+        opacity: animatedOpacity,
+        r: scale,
       };
-    }
-
-    const easing = Easing.out(Easing.sin);
-    const animatedOpacity = withRepeat(
-      withSequence(
-        withTiming(0.8),
-        withTiming(0, {
-          duration: pulseDurationMs,
-          easing,
-        })
-      ),
-      -1,
-      false
-    );
-    const scale = withRepeat(
-      withSequence(
-        withTiming(0),
-        withTiming(outerSize, {
-          duration: pulseDurationMs,
-          easing,
-        })
-      ),
-      -1,
-      false
-    );
-
-    if (pulseBehaviour === 'while-inactive') {
-      return {
-        ...defaultProps,
-        opacity: isActive.value ? withTiming(0) : animatedOpacity,
-        r: isActive.value ? withTiming(0) : scale,
-      };
-    }
-    return {
-      ...defaultProps,
-      opacity: animatedOpacity,
-      r: scale,
-    };
-  }, [hasPulse, isActive, outerSize, pulseBehaviour, pulseDurationMs, x, y]);
+    }, [hasPulse, isActive, outerSize, pulseBehaviour, pulseDurationMs, x, y]);*/
 
   ////////////////////////////////////////////////////////////
+
+  // Inside your component
+  const { animatedDotProps, animatedOuterDotProps } = useAnimatedDot(x, y, hasPulse, isActive, outerSize, pulseBehaviour, pulseDurationMs);
 
   return (
     <>
@@ -177,3 +187,69 @@ export function LineChartDot({
     </>
   );
 }
+
+const useAnimatedDot = (x: Readonly<Animated.SharedValue<number>>, y: Readonly<Animated.SharedValue<number>>, hasPulse: boolean,
+  isActive: Animated.SharedValue<boolean>, outerSize: number, pulseBehaviour: "always" | "while-inactive", pulseDurationMs: number) => {
+    const animatedOpacity = useSharedValue(0.1);
+    const scale = useSharedValue(outerSize);
+  
+    React.useEffect(() => {
+      const easing = Easing.out(Easing.sin);
+      animatedOpacity.value = withRepeat(
+        withSequence(
+          withTiming(0.8),
+          withTiming(0, {
+            duration: pulseDurationMs,
+            easing,
+          })
+        ),
+        -1,
+        false
+      );
+      scale.value = withRepeat(
+        withSequence(
+          withTiming(0),
+          withTiming(outerSize, {
+            duration: pulseDurationMs,
+            easing,
+          })
+        ),
+        -1,
+        false
+      );
+    }, []);
+  
+    const animatedDotProps = useAnimatedProps(
+      () => ({
+        cx: x.value,
+        cy: y.value,
+      }),
+      [x, y]
+    );
+  
+    const animatedOuterDotProps = useAnimatedProps(() => {
+      let defaultProps = {
+        cx: x.value,
+        cy: y.value,
+        opacity: animatedOpacity.value,
+        r: scale.value,
+      };
+  
+      if (!hasPulse) {
+        return defaultProps;
+      }
+  
+      if (pulseBehaviour === 'while-inactive') {
+        return {
+          ...defaultProps,
+          opacity: isActive.value ? withTiming(0) : animatedOpacity.value,
+          r: isActive.value ? withTiming(0) : scale.value,
+        };
+      }
+      return {
+        ...defaultProps,
+      };
+    }, [hasPulse, isActive, outerSize, pulseBehaviour, pulseDurationMs, x, y, animatedOpacity, scale]);
+  
+    return { animatedDotProps, animatedOuterDotProps };
+  };

@@ -6,7 +6,7 @@ import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import useAnimatedPath from './useAnimatedPath';
 import { useLineChart } from "./useLineChart";
-import { addPath, findPath, getArea, smoothData_ } from 'react-native-wagmi-charts/src/charts/line/utils';
+import { addPath, findPath, getArea } from 'react-native-wagmi-charts/src/charts/line/utils';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -61,7 +61,6 @@ export function LineChartGradient({
     if (smoothData && smoothData.length && sTo < smoothData.length) {
       const bPath = findPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
-        index: 0,
         meta: {
           pathWidth: pathWidth,
           height: height,
@@ -88,7 +87,6 @@ export function LineChartGradient({
       });
       addPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
-        index: 0,
         meta: {
           pathWidth: pathWidth,
           height: height,
