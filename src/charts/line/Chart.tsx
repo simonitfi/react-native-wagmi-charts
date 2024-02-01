@@ -10,6 +10,7 @@ import { addPath, findPathIndex, getPath } from './utils';
 import { LineChartContext } from './Context';
 import { runOnJS, useDerivedValue } from 'react-native-reanimated';
 import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
+import useParsedPath from 'react-native-wagmi-charts/src/charts/line/useParsedPath';
 
 export const LineChartDimensionsContext = React.createContext({
   width: 0,
@@ -18,7 +19,6 @@ export const LineChartDimensionsContext = React.createContext({
   parsedPath: {} as Path,
   path: '',
   smoothedParsedPath: {} as Path,
-  smoothedPath: '',
   shape: d3Shape.curveBumpX,
   gutter: 0,
   pathWidth: 0,
@@ -28,7 +28,8 @@ export const LineChartDimensionsContext = React.createContext({
   updateContext: 0,
   pathBuffer: {} as React.RefObject<LineChartPathBuffer>,
   areaBuffer: {} as React.RefObject<LineChartAreaBuffer>,
-  forcePathUpdate: 0
+  forcePathUpdate: 0,
+  isOriginal: false
 });
 
 
@@ -43,9 +44,9 @@ type LineChartProps = ViewProps & {
    */
   id?: string;
   absolute?: boolean;
-  smoothDataRadius?: number;
   isLiveData?: boolean;
   forcePathUpdate?: boolean;
+  isOriginal: boolean;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -60,7 +61,6 @@ export function LineChart({
   shape = d3Shape.curveBumpX,
   id,
   absolute,
-  smoothDataRadius,
   isLiveData = false,
   forcePathUpdate,
   ...props
@@ -76,8 +76,6 @@ export function LineChart({
   const areaBuffer = React.useRef<LineChartAreaBuffer>([]);
 
   const round = React.useRef(0);
-
-  const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   useDerivedValue(() => {
     let dum = 0
@@ -107,132 +105,57 @@ export function LineChart({
     return allowedWidth;
   }, [data.length, width, xLength]);
 
-  const smoothedPath = React.useMemo(() => {
-    if (smoothData && smoothData.length > 0) {
-      const bPathIndex = findPathIndex({
-        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
-        fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
-        totalLength: smoothData.length, data: '',
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: yGutter,
-          yDomain,
-          xDomain
-        }
-      }, pathBuffer.current)
-      if (bPathIndex > -1) {
-        const res = pathBuffer.current[bPathIndex].data
-        pathBuffer.current.splice(bPathIndex, 1);
-        return res
-      }
-      const result = getPath({
-        data: smoothData,//smoothData_(smoothData),
-        width: pathWidth,
-        height,
-        gutter: yGutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: false,
-      });
-      if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
-        /*console.log('smoothedPath ADD', {
-          from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
-          fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
-          totalLength: smoothData.length, data: ''
-        })*/
-      addPath({
-        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
-        fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
-        totalLength: smoothData.length, data: result,
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: yGutter,
-          yDomain,
-          xDomain
-        }
-      }, pathBuffer.current)
-      return result
-    }
-    return '';
-  }, [
-    smoothData,
-    smoothDataRadius,
-    pathWidth,
-    height,
-    yGutter,
-    shape,
-    yDomain,
-    xDomain,
-  ]);
-
-  const path = React.useMemo(() => {
-    if (update === 0 || (!isActive.value && isLiveData)) {
-      return smoothedPath
-    }
-    if (data && data.length > 0) {
-      return getPath({
-        data,
-        width: pathWidth,
-        height,
-        gutter: yGutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: true,
-      });
-    }
-    return '';
-  }, [height, yGutter, shape, update, forcePathUpdate]);
-
   const dataLength = data.length;
-  const smoothedParsedPath = React.useMemo(() => {
-    return parse(smoothedPath)
-  }, [smoothedPath]);
-  const parsedPath = React.useMemo(() => parse(path), [update]);
 
   const pointWidth = React.useMemo(
     () => width / (dataLength - 1),
     [dataLength, width]
   );
 
-  const contextValue = React.useMemo(
+  const {parsedPath, path, isOriginal } = useParsedPath( {  yGutter,
+    id,
+    isActive,
+    pathWidth,
+    height,
+    width,
+    shape,
+    isLiveData,
+    update,
+    pathBuffer})
+
+    console.log('->useParsedPath', isOriginal)
+
+    const contextValue = React.useMemo(
     () => ({
       gutter: yGutter,
-      parsedPath: (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath,
-      smoothedParsedPath,
+      path,
+      parsedPath,
+      smoothedParsedPath: parsedPath,
       pointWidth,
-      path: (update === 0 || (!isActive.value && isLiveData)) ? smoothedPath : path,
-      smoothedPath,
       width,
       height,
       pathWidth,
       shape,
-      smoothDataRadius,
       update,
       isLiveData,
       updateContext,
       pathBuffer,
       areaBuffer,
-      forcePathUpdate
+      forcePathUpdate,
+      isOriginal
     }),
     [
       yGutter,
       parsedPath,
-      smoothedParsedPath,
       pointWidth,
-      path,
-      smoothedPath,
       width,
       height,
       pathWidth,
       shape,
-      smoothDataRadius,
       update,
       isLiveData,
-      updateContext
+      updateContext,
+      isOriginal
     ]
   );
 

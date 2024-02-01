@@ -146,12 +146,12 @@ export function LineChartPathWrapper({
       >
         <View style={viewSize}>
           <Svg width={width} height={height}>
-            <LineChartPath
+          {strokeWidth > 0 && <LineChartPath
               color={color}
               inactiveColor={inactiveColor}
               width={strokeWidth}
               {...pathProps}
-            />
+            />}
             {backgroundChildren}
           </Svg>
         </View>
@@ -165,7 +165,7 @@ export function LineChartPathWrapper({
       >
         <View style={StyleSheet.absoluteFill}>
           <AnimatedSVG animatedProps={svgProps} height={height}>
-            <LineChartPath color={color} width={strokeWidth} {...pathProps} />
+            {strokeWidth > 0 && <LineChartPath color={color} width={strokeWidth} {...pathProps} />}
             {foregroundChildren}
           </AnimatedSVG>
         </View>

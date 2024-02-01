@@ -14,7 +14,7 @@ import { Circle, CircleProps } from 'react-native-svg';
 import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import { getXPositionForCurve } from './utils/getXPositionForCurve';
-import { getYForX, max } from 'react-native-redash';
+import { getYForX } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -65,7 +65,7 @@ export function LineChartDot({
   forceUpdate,
 }: LineChartDotProps) {
   const { isActive } = useLineChart();
-  const { parsedPath, smoothedParsedPath, update, isLiveData, width } = React.useContext(LineChartDimensionsContext);
+  const { parsedPath, isOriginal, update, isLiveData, width } = React.useContext(LineChartDimensionsContext);
 
   ////////////////////////////////////////////////////////////
 
@@ -78,22 +78,21 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-    return withTiming(Math.min(getXPositionForCurve((update !== 0 && !isLiveData) ? parsedPath : smoothedParsedPath, (update !== 0 && !isLiveData) ? at : sAt), width));
-  }, [at, sAt, parsedPath, smoothedParsedPath, isLiveData, update, width]);
+    return withTiming(Math.min(getXPositionForCurve(parsedPath, isOriginal ? at : sAt), width));
+  }, [at, sAt, parsedPath, isLiveData, isOriginal, update, width]);
 
   const y = useDerivedValue(
     () => {
-      const p = ((update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath)
-      if (update === 0) return getYForX(p!, x.value) || 0
-      let val = getYForX(p!, x.value)
+      if (update === 0) return getYForX(parsedPath!, x.value) || 0
+      let val = getYForX(parsedPath!, x.value)
       if (val === null) {
-        let maxPoint = p.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, p.curves[0].to);
+        let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
         val = maxPoint.y;
       }
       return withTiming(val || 0)
     }
     ,
-    [parsedPath, smoothedParsedPath, x, isLiveData]
+    [parsedPath, x, isLiveData]
   );
 
   ////////////////////////////////////////////////////////////

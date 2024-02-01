@@ -7,11 +7,14 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
-import { addPath, findPath, getPath, interpolatePath } from './utils';
-import { LineChartDimensionsContext } from 'react-native-wagmi-charts/src/charts/line/Chart';
-import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
+import { interpolatePath } from './utils';
 
-export default function useAnimatedPath({
+import { useLineChart } from './useLineChart';
+
+import { LineChartDimensionsContext } from './Chart';
+import { addPath, findPath, getArea } from './utils';
+
+export default function useAnimatedArea({
   enabled = true,
   from = 0,
   to = -1,
@@ -28,7 +31,7 @@ export default function useAnimatedPath({
 }) {
 
   const { data, sData, yDomain, xDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape, isLiveData, update, pathBuffer } = React.useContext(
+  const { pathWidth, height, gutter, shape, isLiveData, update, areaBuffer } = React.useContext(
     LineChartDimensionsContext
   );
   
@@ -37,8 +40,8 @@ export default function useAnimatedPath({
   if (sTo < 0) sTo = smoothData.length - 1
   if (to < 0) to = data.length - 1
  
-  const smoothedPath = React.useMemo(() => {
-    if (smoothData && smoothData.length > 0 && sTo < smoothData.length) {
+  const smoothedArea = React.useMemo(() => {
+    if (smoothData && smoothData.length && sTo < smoothData.length) {
       const bPath = findPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
         meta: {
@@ -48,12 +51,13 @@ export default function useAnimatedPath({
           yDomain,
           xDomain
         }
-      }, pathBuffer.current)
+      }, areaBuffer.current)
 
       if (bPath) {
+        console.log('FOUND AREA')
         return bPath.data
       }
-      const result = getPath({
+      const result = getArea({
         data: smoothData,
         from: sFrom,
         to: sTo,
@@ -65,6 +69,7 @@ export default function useAnimatedPath({
         xDomain,
         isOriginalData: false,
       });
+      console.log('ADD AREA')
       addPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
         meta: {
@@ -74,7 +79,7 @@ export default function useAnimatedPath({
           yDomain,
           xDomain
         }
-      }, pathBuffer.current)
+      }, areaBuffer.current)
       return result
     }
     return '';
@@ -90,24 +95,16 @@ export default function useAnimatedPath({
     xDomain,
   ]);
 
-  const ardea = React.useMemo(() => {
-    console.log('area')
-    if (data && data.length > 0) {
-      return 
-    }
-    return '';
-  }, [height, gutter, shape]);
-
   const transition = useSharedValue(0);
 
-  const currentPath = useSharedValue(smoothedPath);
-  const previousPath = useSharedValue(smoothedPath);
+  const currentPath = useSharedValue(smoothedArea);
+  const previousPath = useSharedValue(smoothedArea);
 
-  const path = useSharedValue('');
+  const area = useSharedValue('');
 
-  const setPath = () => {
+  const setArea = () => {
     if (data && data.length > 0) {
-      path.value = getPath({
+      area.value = getArea({
         data,
         from,
         to,
@@ -120,36 +117,36 @@ export default function useAnimatedPath({
         isOriginalData: true,
       });
     }else{
-      path.value = '';
+      area.value = '';
     }
   }
 
   React.useEffect(() => {
     if (update !== 0 && !isLiveData){
-      setPath()
+      setArea()
     }
   }, [height, gutter, shape, update, isLiveData]);
 
   useAnimatedReaction(
     () => {
       if (update === 0 || (!isActive.value && isLiveData)) {
-        path.value = smoothedPath
+        area.value = smoothedArea
       }
       return isActive.value
     },
     (result, previous) => {
       if (result && isLiveData) {
-          runOnJS(setPath)()
+          runOnJS(setArea)()
       }
     },
-    [isActive, smoothedPath]
+    [isActive, smoothedArea]
   );
 
   useAnimatedReaction(
     () => {
-      if (currentPath.value !== path.value){
+      if (currentPath.value !== area.value){
         previousPath.value = currentPath.value
-        currentPath.value = path.value
+        currentPath.value = area.value
         return currentPath.value;
       }
       return false

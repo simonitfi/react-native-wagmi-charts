@@ -51,7 +51,7 @@ export function LineChartTooltip({
   format,
   ...props
 }: LineChartTooltipProps) {
-  const { width, height, parsedPath, smoothedParsedPath, isLiveData, update } = React.useContext(
+  const { width, height, parsedPath, isOriginal} = React.useContext(
     LineChartDimensionsContext
   );
   const { type } = React.useContext(CursorContext);
@@ -73,24 +73,22 @@ export function LineChartTooltip({
   // When the user set a `at` index, get the index's y & x positions
   const atXPosition = useMemo(
     () => {
-      const parsedPath_ = (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath
-      const at_ = (update === 0 || (!isActive.value && isLiveData)) ? sAt : at
+      const at_ = isOriginal ? at : sAt
       const result = at_ !== null && at_ !== undefined
         ? at_ === 0
           ? 0
-          : parsedPath_.curves[Math.min(at_, parsedPath_.curves.length) - 1].to.x
+          : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x
         : undefined
       return result
     },
-    [at, sAt, parsedPath.curves, smoothedParsedPath.curves]
+    [at, sAt, parsedPath.curves]
   );
 
   const atYPosition = useDerivedValue(() => {
-    const p = (update === 0 || (!isActive.value && isLiveData)) ? smoothedParsedPath : parsedPath
     if (atXPosition == null) return undefined
-    let val = getYForX(p, atXPosition)
+    let val = getYForX(parsedPath, atXPosition)
     if (val === null) {
-      let maxPoint = p.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, p.curves[0].to);
+      let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
       val = maxPoint.y;
       console.log('¤¤¤¤     ¤¤¤¤¤¤ ', val, x.value)
     }

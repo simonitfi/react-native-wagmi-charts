@@ -2,11 +2,10 @@ import * as React from 'react';
 import Animated from 'react-native-reanimated';
 import { Defs, LinearGradient, Stop, Path, PathProps } from 'react-native-svg';
 
-import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
-import useAnimatedPath from './useAnimatedPath';
+import useAnimatedArea from './useAnimatedArea';
 import { useLineChart } from "./useLineChart";
-import { addPath, findPath, getArea } from 'react-native-wagmi-charts/src/charts/line/utils';
+
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -26,10 +25,10 @@ LineChartGradient.displayName = 'LineChartGradient';
 
 export function LineChartGradient({
   color: overrideColor = undefined,
-  from = 0,
-  to = -1,
-  sFrom = 0,
-  sTo = -1,
+  from,
+  to,
+  sFrom,
+  sTo,
   opacityValues,
   children,
 
@@ -40,13 +39,6 @@ export function LineChartGradient({
     React.useContext(LineChartPathContext);
   const { isActive } = useLineChart();
 
-  const { data, sData, yDomain, xDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape, smoothDataRadius, update, forcePathUpdate, areaBuffer } = React.useContext(
-    LineChartDimensionsContext
-  );
-  
-  const smoothData = React.useMemo(() => (sData || data), [sData, data]);
-
   const color = overrideColor || contextColor;
 
   const o1 = opacityValues && opacityValues[0]
@@ -54,88 +46,14 @@ export function LineChartGradient({
   const o3 = opacityValues && opacityValues[2]
   const o4 = opacityValues && opacityValues[3]
 
-  if (sTo < 0) sTo = smoothData.length - 1
-  if (to < 0) to = data.length - 1
-
-  const smoothedArea = React.useMemo(() => {
-    if (smoothData && smoothData.length && sTo < smoothData.length) {
-      const bPath = findPath({
-        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: gutter,
-          yDomain,
-          xDomain
-        }
-      }, areaBuffer.current)
-
-      if (bPath) {
-        return bPath.data
-      }
-      const result = getArea({
-        data: smoothData, // smoothData_(smoothData),
-        from: sFrom,
-        to: sTo,
-        width: pathWidth,
-        height,
-        gutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: false,
-      });
-      addPath({
-        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: gutter,
-          yDomain,
-          xDomain
-        }
-      }, areaBuffer.current)
-      return result
-    }
-    return '';
-  }, [
-    smoothData,
-    smoothDataRadius,
-    sFrom,
-    sTo,
-    pathWidth,
-    height,
-    gutter,
-    shape,
-    yDomain,
-    xDomain,
-  ]);
-
-  const area = React.useMemo(() => {
-    if (update === 0) return smoothedArea
-    if (data && data.length > 0) {
-      return getArea({
-        data,
-        from,
-        to,
-        width: pathWidth,
-        height,
-        gutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: true,
-      });
-    }
-    return '';
-  }, [height, gutter, shape, update, forcePathUpdate]);
-
   ////////////////////////////////////////////////
 
-  const { animatedProps } = useAnimatedPath({
+  const { animatedProps } = useAnimatedArea({
     enabled: isTransitionEnabled,
-    path: area,
-    smoothedPath: smoothedArea,
+    from,
+    to,
+    sFrom,
+    sTo,
     isActive,
   });
 

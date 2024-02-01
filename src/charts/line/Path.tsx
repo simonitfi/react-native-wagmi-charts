@@ -43,7 +43,6 @@ export function LineChartPath({
   width: strokeWidth = 3,
   ...props
 }: LineChartPathProps) {
-  const { path, smoothedPath } = React.useContext(LineChartDimensionsContext);
   const { isTransitionEnabled, isInactive } =
     React.useContext(LineChartPathContext);
   const { isActive } = useLineChart();
@@ -51,8 +50,6 @@ export function LineChartPath({
 
   const { animatedProps } = useAnimatedPath({
     enabled: isTransitionEnabled,
-    path: path,
-    smoothedPath: smoothedPath,
     isActive,
   });
 
