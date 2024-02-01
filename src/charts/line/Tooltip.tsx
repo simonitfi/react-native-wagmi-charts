@@ -81,7 +81,7 @@ export function LineChartTooltip({
         : undefined
       return result
     },
-    [at, sAt, parsedPath.curves]
+    [at, sAt, parsedPath]
   );
 
   const atYPosition = useDerivedValue(() => {
@@ -90,7 +90,6 @@ export function LineChartTooltip({
     if (val === null) {
       let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
       val = maxPoint.y;
-      console.log('¤¤¤¤     ¤¤¤¤¤¤ ', val, x.value)
     }
     return val || 0
   }, [atXPosition]);

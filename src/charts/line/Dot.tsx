@@ -79,7 +79,7 @@ export function LineChartDot({
 
   const x = useDerivedValue(() => {
     return withTiming(Math.min(getXPositionForCurve(parsedPath, isOriginal ? at : sAt), width));
-  }, [at, sAt, parsedPath, isLiveData, isOriginal, update, width]);
+  }, [at, sAt, parsedPath.curves, isLiveData, isOriginal, update, width]);
 
   const y = useDerivedValue(
     () => {
@@ -92,7 +92,7 @@ export function LineChartDot({
       return withTiming(val || 0)
     }
     ,
-    [parsedPath, x, isLiveData]
+    [parsedPath.curves, x, isLiveData]
   );
 
   ////////////////////////////////////////////////////////////

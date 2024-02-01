@@ -8,7 +8,6 @@ import {
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
 import { addPath, findPath, findPathIndex, getPath, interpolatePath } from './utils';
-import { LineChartDimensionsContext } from 'react-native-wagmi-charts/src/charts/line/Chart';
 import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
 import { Path, parse } from 'react-native-redash';
 import { LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
@@ -42,11 +41,16 @@ export default function useParsedPath({
 }) {
 
   const { data, sData, yDomain, xDomain } = useLineChart(id);
-  const [u, setU] = React.useState(0);
+
+  const [isOriginal, setIsOriginal] = React.useState(false);
 
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
+  console.log('RENDER')
+
   const smoothedPath = React.useMemo(() => {
+    console.log('smoothedPath')
+
     if (smoothData && smoothData.length > 0) {
       const bPathIndex = findPathIndex({
         from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
@@ -61,9 +65,9 @@ export default function useParsedPath({
         }
       }, pathBuffer.current)
       if (bPathIndex > -1) {
-        // const res = pathBuffer.current[bPathIndex].data
-        // pathBuffer.current.splice(bPathIndex, 1);
-        // return res
+        const res = pathBuffer.current[bPathIndex].data
+        pathBuffer.current.splice(bPathIndex, 1);
+        return res
       }
       const result = getPath({
         data: smoothData,//smoothData_(smoothData),
@@ -106,18 +110,11 @@ export default function useParsedPath({
     xDomain,
   ]);
 
-  const smoothedParsedPath = React.useMemo(() => {
-    return parse(smoothedPath)
-  }, [smoothedPath]);
+  const smoothedParsedPath = React.useMemo(() => (parse(smoothedPath)), [smoothedPath]);
 
-  const path = useSharedValue(smoothedPath);
-  const parsedPath = useSharedValue<Path>(smoothedParsedPath);
-
-  const isOriginal = useSharedValue<boolean>(false);
-
-  const setPath = () => {
-    console.log('setPath parse')
+  const path = React.useMemo(() => {
     if (data && data.length > 0) {
+      if (!isOriginal) return smoothedPath
       const p = getPath({
         data,
         width: pathWidth,
@@ -128,44 +125,38 @@ export default function useParsedPath({
         xDomain,
         isOriginalData: true,
       })
-      parsedPath.value = parse(p)
-      path.value = p
+      return p
     } else {
-      parsedPath.value = null;
-      path.value = '';
+      return '';
     }
-    setU(Date.now())
-  }
+  }, [isOriginal, smoothedPath]);
+
+  const parsedPath =  React.useMemo(() => {
+    if (isOriginal) return parse(path)
+   return smoothedParsedPath
+  }, [isOriginal, path]);  
 
   React.useEffect(() => {
     if (update !== 0 && !isLiveData) {
-      setPath()
+      setIsOriginal(true)
     }
   }, [height, yGutter, shape, update, isLiveData]);
 
   useAnimatedReaction(
     () => {
       if (update === 0 || (!isActive.value && isLiveData)) {
-        if (parsedPath.value !== smoothedParsedPath) parsedPath.value = smoothedParsedPath
-        if (path.value !== smoothedPath) path.value = smoothedPath
-        isOriginal.value = false
+        return false
       } else {
-        isOriginal.value = true
+        return true
       }
-      if (parsedPath.value === smoothedParsedPath || path.value === smoothedPath) {
-        return isActive.value
-      }
-      return false
     },
     (result, previous) => {
-      if (result && isLiveData) {
-        runOnJS(setPath)()
-      }else if (!result && isLiveData){
-        // runOnJS(setU)(Date.now())
+      if (result !== previous) {
+        runOnJS(setIsOriginal)(result)
       }
     },
-    [isActive, smoothedParsedPath]
+    [isActive]
   );
 
-  return { parsedPath: parsedPath.value, path: path.value, isOriginal: isOriginal.value };
+  return { parsedPath: parsedPath, path: path, isOriginal: isOriginal };
 }

@@ -18,11 +18,9 @@ export const LineChartDimensionsContext = React.createContext({
   pointWidth: 0,
   parsedPath: {} as Path,
   path: '',
-  smoothedParsedPath: {} as Path,
   shape: d3Shape.curveBumpX,
   gutter: 0,
   pathWidth: 0,
-  smoothDataRadius: 0.5,
   update: 0,
   isLiveData: false,
   updateContext: 0,
@@ -123,14 +121,11 @@ export function LineChart({
     update,
     pathBuffer})
 
-    console.log('->useParsedPath', isOriginal)
-
     const contextValue = React.useMemo(
     () => ({
       gutter: yGutter,
       path,
       parsedPath,
-      smoothedParsedPath: parsedPath,
       pointWidth,
       width,
       height,
