@@ -46,11 +46,7 @@ export default function useParsedPath({
 
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
-  console.log('RENDER', yDomain)
-
   const smoothedPath = React.useMemo(() => {
-    console.log('smoothedPath')
-
     if (smoothData && smoothData.length > 0) {
       const bPathIndex = findPathIndex({
         from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
@@ -80,11 +76,6 @@ export default function useParsedPath({
         isOriginalData: false,
       });
       if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
-        /*console.log('smoothedPath ADD', {
-          from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
-          fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
-          totalLength: smoothData.length, data: ''
-        })*/
         addPath({
           from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
           fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,

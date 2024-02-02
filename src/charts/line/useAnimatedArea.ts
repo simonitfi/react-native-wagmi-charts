@@ -41,8 +41,6 @@ export default function useAnimatedArea({
   if (to < 0) to = data.length - 1
 
   const smoothedArea = React.useMemo(() => {
-    console.log('FOUND AREA')
-
     if (smoothData && smoothData.length && sTo < smoothData.length) {
       const bPathIndex = findPathIndex({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
@@ -56,7 +54,6 @@ export default function useAnimatedArea({
       }, areaBuffer.current)
 
       if (bPathIndex > -1) {
-        console.log('FOUND AREA')
         const res = areaBuffer.current[bPathIndex].data
         areaBuffer.current.splice(bPathIndex, 1);
         return res
@@ -73,7 +70,6 @@ export default function useAnimatedArea({
         xDomain,
         isOriginalData: false,
       });
-      console.log('ADD AREA')
       addPath({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
         meta: {
@@ -170,9 +166,7 @@ export default function useAnimatedArea({
     if (previousArea.value && enabled) {
       function excludeSegment(a, b) {
         if (a.x === b.x) {
-          // console.log(a.x,b.x)
           return true
-          // return a.x === 374; // here 300 is the max X
         }
         return false
       }

@@ -90,14 +90,6 @@ export default function useAnimatedPath({
     xDomain,
   ]);
 
-  const ardea = React.useMemo(() => {
-    console.log('area')
-    if (data && data.length > 0) {
-      return 
-    }
-    return '';
-  }, [height, gutter, shape]);
-
   const transition = useSharedValue(0);
 
   const currentPath = useSharedValue(smoothedPath);
@@ -167,7 +159,6 @@ export default function useAnimatedPath({
   const animatedProps = useAnimatedProps(() => {
     let d = currentPath.value || '';
     if (previousPath.value && enabled) {
-      // console.log('###',currentPath.value === previousPath.value)
       const pathInterpolator = interpolatePath(previousPath.value, currentPath.value, null);
       d = pathInterpolator(transition.value);
     }

@@ -70,8 +70,6 @@ export function LineChartTooltip({
         if (isOriginal) {
           elementWidthOriginal.value = event.nativeEvent.layout.width;
           elementHeightOriginal.value = event.nativeEvent.layout.height;
-          elementWidth.value = event.nativeEvent.layout.width;
-          elementHeight.value = event.nativeEvent.layout.height;
         } else {
           elementWidth.value = event.nativeEvent.layout.width;
           elementHeight.value = event.nativeEvent.layout.height;
@@ -124,10 +122,10 @@ export function LineChartTooltip({
       elementHeightOriginal.value = elementHeight.value
     }
 
-    const ew = (update === 0 || (!isActive.value && isLiveData)) ? elementWidth.value : elementWidthOriginal.value
-    const eh = (update === 0 || (!isActive.value && isLiveData)) ? elementHeight.value : elementHeightOriginal.value
+    const ew = ((update !== 0 && !isLiveData) || (isActive.value && isLiveData)) ? elementWidthOriginal.value : elementWidth.value
+    const eh = ((update !== 0 && !isLiveData) || (isActive.value && isLiveData)) ? elementHeightOriginal.value : elementHeight.value
 
-    // console.log(ew, elementWidthOriginal.value, elementWidth.value)
+    // console.log(ew, elementWidthOriginal.value, elementWidth.value, update)
     let translateXOffset = ew / 2;
     // the tooltip is considered static when the user specified an `at` prop 
     const isStatic = atYPosition.value != null;
@@ -172,7 +170,10 @@ export function LineChartTooltip({
     let opacity = isActive.value ? 1 : 0;
     if (isStatic) {
       // Only show static when there is no active cursor
-      opacity = withTiming(isActive.value ? 0 : 1);
+      if (isActive.value)
+        opacity = 0;
+      else
+        opacity = withTiming(1);
     }
 
     // Set from and to depending on null values on data
