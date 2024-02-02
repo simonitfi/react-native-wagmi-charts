@@ -46,7 +46,7 @@ export default function useParsedPath({
 
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
-  console.log('RENDER')
+  console.log('RENDER', yDomain)
 
   const smoothedPath = React.useMemo(() => {
     console.log('smoothedPath')

@@ -57,16 +57,17 @@ export function LineChartProvider({
 
   const contextValue = React.useMemo<TLineChartContext>(() => {
     const values = lineChartDataPropToArray(data).map(({ value }) => value);
+    const yDomain = {
+      min: yRange?.min ?? Math.min(...values),
+      max: yRange?.max ?? Math.max(...values),
+    }
 
     return {
       currentX,
       currentIndex,
       isActive,
       domain,
-      yDomain: {
-        min: yRange?.min ?? Math.min(...values),
-        max: yRange?.max ?? Math.max(...values),
-      },
+      yDomain,
       xDomain,
       xLength:
         xLength ?? (Array.isArray(data) ? data : Object.values(data)[0]).length,

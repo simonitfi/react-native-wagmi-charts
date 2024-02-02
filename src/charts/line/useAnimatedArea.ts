@@ -41,6 +41,8 @@ export default function useAnimatedArea({
   if (to < 0) to = data.length - 1
 
   const smoothedArea = React.useMemo(() => {
+    console.log('FOUND AREA')
+
     if (smoothData && smoothData.length && sTo < smoothData.length) {
       const bPathIndex = findPathIndex({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
@@ -99,8 +101,8 @@ export default function useAnimatedArea({
 
   const transition = useSharedValue(0);
 
-  const currentPath = useSharedValue(smoothedArea);
-  const previousPath = useSharedValue(smoothedArea);
+  const currentArea = useSharedValue(smoothedArea);
+  const previousArea = useSharedValue(smoothedArea);
 
   const area = useSharedValue('');
 
@@ -146,10 +148,10 @@ export default function useAnimatedArea({
 
   useAnimatedReaction(
     () => {
-      if (currentPath.value !== area.value) {
-        previousPath.value = currentPath.value
-        currentPath.value = area.value
-        return currentPath.value;
+      if (currentArea.value !== area.value) {
+        previousArea.value = currentArea.value
+        currentArea.value = area.value
+        return currentArea.value;
       }
       return false
     },
@@ -157,17 +159,24 @@ export default function useAnimatedArea({
       if (result && result !== previous) {
         transition.value = 0;
         transition.value = withTiming(1);
-        //transition.value = withTiming(1,{duration:800});
+        // transition.value = withTiming(1,{duration:2500});
       }
     },
     []
   );
 
   const animatedProps = useAnimatedProps(() => {
-    let d = currentPath.value || '';
-    if (previousPath.value && enabled) {
-      // console.log('###',currentPath.value === previousPath.value)
-      const pathInterpolator = interpolatePath(previousPath.value, currentPath.value, null);
+    let d = currentArea.value || '';
+    if (previousArea.value && enabled) {
+      function excludeSegment(a, b) {
+        if (a.x === b.x) {
+          // console.log(a.x,b.x)
+          return true
+          // return a.x === 374; // here 300 is the max X
+        }
+        return false
+      }
+      const pathInterpolator = interpolatePath(previousArea.value, currentArea.value, excludeSegment);
       d = pathInterpolator(transition.value);
     }
     return {

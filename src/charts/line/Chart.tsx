@@ -63,8 +63,8 @@ export function LineChart({
   forcePathUpdate,
   ...props
 }: LineChartProps) {
-  const { yDomain, xLength, xDomain, isActive } = React.useContext(LineChartContext);
-  const { data, sData } = useLineChartData({
+  const { xLength, isActive } = React.useContext(LineChartContext);
+  const { data } = useLineChartData({
     id,
   });
 
@@ -110,7 +110,8 @@ export function LineChart({
     [dataLength, width]
   );
 
-  const {parsedPath, path, isOriginal } = useParsedPath( {  yGutter,
+  const {parsedPath, path, isOriginal } = useParsedPath({
+    yGutter,
     id,
     isActive,
     pathWidth,
@@ -119,7 +120,8 @@ export function LineChart({
     shape,
     isLiveData,
     update,
-    pathBuffer})
+    pathBuffer
+  })
 
     const contextValue = React.useMemo(
     () => ({

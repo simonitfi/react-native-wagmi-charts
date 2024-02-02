@@ -62,7 +62,7 @@ export const addPath = (data: LineChartPath | LineChartArea, buffer: LineChartPa
       x.toTime = Number(x.toTime)
       x.meta = meta
       buffer.push(x)
-      if (buffer.length > 20) {
+      if (buffer.length > 10) {
         buffer.shift()
       }
     }
@@ -75,7 +75,7 @@ export const addPath = (data: LineChartPath | LineChartArea, buffer: LineChartPa
       x.toData = Number(x.toData.toFixed(1))
       x.meta = meta
       buffer.push(x)
-      if (buffer.length > 20) {
+      if (buffer.length > 10) {
         buffer.shift()
       }
     }
