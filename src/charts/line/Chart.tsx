@@ -2,7 +2,7 @@ import * as React from 'react';
 // @ts-ignore
 import * as d3Shape from 'd3-shape';
 
-import { Dimensions, StyleSheet, View, ViewProps } from 'react-native';
+import { Dimensions, Platform, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path, parse } from 'react-native-redash';
 import { addPath, findPathIndex, getPath } from './utils';
@@ -75,6 +75,11 @@ export function LineChart({
 
   const round = React.useRef(0);
 
+  React.useEffect(() => {
+    // On WEb force update
+    Platform.OS === 'web' && setUpdate(Date.now())
+  }, [height]);
+
   useDerivedValue(() => {
     let dum = 0
     if (isActive.value) dum = 1
@@ -100,6 +105,8 @@ export function LineChart({
     if (xLength > data.length) {
       allowedWidth = (width * data.length) / xLength;
     }
+    // On WEb force update
+    Platform.OS === 'web' && setUpdate(Date.now())
     return allowedWidth;
   }, [data.length, width, xLength]);
 
@@ -110,7 +117,7 @@ export function LineChart({
     [dataLength, width]
   );
 
-  const {parsedPath, path, isOriginal } = useParsedPath({
+  const { parsedPath, path, isOriginal } = useParsedPath({
     yGutter,
     id,
     isActive,
@@ -123,7 +130,7 @@ export function LineChart({
     pathBuffer
   })
 
-    const contextValue = React.useMemo(
+  const contextValue = React.useMemo(
     () => ({
       gutter: yGutter,
       path,

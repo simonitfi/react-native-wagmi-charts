@@ -1,15 +1,12 @@
 import * as React from 'react';
 import {
   runOnJS,
-  useAnimatedProps,
   useAnimatedReaction,
-  useSharedValue,
-  withTiming,
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
-import { addPath, findPath, findPathIndex, getPath, interpolatePath } from './utils';
+import { addPath, findPath, findPathIndex, getPath } from './utils';
 import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
-import { Path, parse } from 'react-native-redash';
+import { parse } from 'react-native-redash';
 import { LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 
 

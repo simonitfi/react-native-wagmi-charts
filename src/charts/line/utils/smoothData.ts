@@ -12,6 +12,7 @@ export const smoothData_ = (data: TLineChartData) => {
 };
 
 export const findPathIndex = (data: LineChartPath | LineChartArea, buffer: LineChartPathBuffer | LineChartAreaBuffer | null) => {
+  return -1
   if (typeof data.fromData !== 'number' || typeof data.toData !== 'number' || buffer === null) return -1
   const meta = JSON.stringify(data.meta)
 
@@ -29,6 +30,7 @@ export const findPathIndex = (data: LineChartPath | LineChartArea, buffer: LineC
 };
 
 export const findPath = (data: LineChartPath | LineChartArea, buffer: LineChartPathBuffer | LineChartAreaBuffer | null) => {
+  return
   if (typeof data.fromData !== 'number' || typeof data.toData !== 'number' || buffer === null) return
   const meta = JSON.stringify(data.meta)
 

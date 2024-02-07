@@ -7,7 +7,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
-import { addPath, findPath, getPath, interpolatePath } from './utils';
+import { addPath, findPath, findPathIndex, getPath, interpolatePath } from './utils';
 import { LineChartDimensionsContext } from 'react-native-wagmi-charts/src/charts/line/Chart';
 import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
 
@@ -39,7 +39,7 @@ export default function useAnimatedPath({
  
   const smoothedPath = React.useMemo(() => {
     if (smoothData && smoothData.length > 0 && sTo < smoothData.length) {
-      const bPath = findPath({
+      const bPathIndex = findPathIndex({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
         meta: {
           pathWidth: pathWidth,
@@ -50,8 +50,10 @@ export default function useAnimatedPath({
         }
       }, pathBuffer.current)
 
-      if (bPath) {
-        return bPath.data
+      if (bPathIndex > -1) {
+        const res = pathBuffer.current[bPathIndex].data
+        pathBuffer.current.splice(bPathIndex, 1);
+        return res
       }
       const result = getPath({
         data: smoothData,
@@ -159,7 +161,14 @@ export default function useAnimatedPath({
   const animatedProps = useAnimatedProps(() => {
     let d = currentPath.value || '';
     if (previousPath.value && enabled) {
-      const pathInterpolator = interpolatePath(previousPath.value, currentPath.value, null);
+      function excludeSegment(a, b) {
+        if (a.x === b.x) {
+          console.log('##################################',a.x, b.x)
+          return true          
+        }
+        return false
+      }
+      const pathInterpolator = interpolatePath(previousPath.value, currentPath.value, excludeSegment);
       d = pathInterpolator(transition.value);
     }
     return {

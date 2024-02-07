@@ -61,7 +61,7 @@ export function LineChartDot({
   pulseDurationMs = 1200,
   showInactiveColor = true,
   size = 4,
-  outerSize = size * 3.5,
+  outerSize = size * 4,
   forceUpdate,
 }: LineChartDotProps) {
   const { isActive } = useLineChart();

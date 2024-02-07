@@ -10,7 +10,7 @@ import { LineChartPriceText, LineChartPriceTextProps } from './PriceText';
 
 import { CursorContext } from './Cursor';
 import { LineChartDimensionsContext } from './Chart';
-import type { LayoutChangeEvent, ViewProps } from 'react-native';
+import { Platform, type LayoutChangeEvent, type ViewProps } from 'react-native';
 import type { TFormatterFn } from '../candle/types';
 import { getYForX } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
@@ -126,20 +126,35 @@ export function LineChartTooltip({
     const eh = ((update !== 0 && !isLiveData) || (isActive.value && isLiveData)) ? elementHeightOriginal.value : elementHeight.value
 
     // console.log(ew, elementWidthOriginal.value, elementWidth.value, update)
-    let translateXOffset = ew / 2;
+    let translateXOffset
     // the tooltip is considered static when the user specified an `at` prop 
     const isStatic = atYPosition.value != null;
 
     // Calculate X position:
     const x = atXPosition ?? currentX.value;
-    if (x < ew / 2 + xGutter) {
-      const xOffset = ew / 2 + xGutter - x;
-      translateXOffset = translateXOffset - xOffset;
+
+    if (Platform.OS !== 'web'){
+      translateXOffset = ew / 2
+      if (x < ew / 2 + xGutter) {
+        const xOffset = ew / 2 + xGutter - x;
+        translateXOffset = translateXOffset - xOffset;
+      }
+      if (x > width - ew / 2 - xGutter) {
+        const xOffset = x - (width - ew / 2 - xGutter);
+        translateXOffset = translateXOffset + xOffset;
+      }
+    }else{
+      translateXOffset = ew / 8
+      if (x < ew / 8 + xGutter) {
+        const xOffset = ew / 8 + xGutter - x;
+        translateXOffset = translateXOffset - xOffset;
+      }
+      if (x > width - ew / 8 - xGutter) {
+        const xOffset = x - (width - ew / 8 - xGutter);
+        translateXOffset = translateXOffset + xOffset;
+      }
     }
-    if (x > width - ew / 2 - xGutter) {
-      const xOffset = x - (width - ew / 2 - xGutter);
-      translateXOffset = translateXOffset + xOffset;
-    }
+
     // Calculate Y position:
     let translateYOffset = 0;
     const y = atYPosition.value ?? currentY.value;
@@ -192,6 +207,7 @@ export function LineChartTooltip({
     if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
       opacity = 0
     }
+
 
     return {
       transform: [
