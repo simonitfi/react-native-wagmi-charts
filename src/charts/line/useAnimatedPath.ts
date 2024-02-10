@@ -136,7 +136,7 @@ export default function useAnimatedPath({
           runOnJS(setPath)()
       }
     },
-    [isActive, smoothedPath]
+    [isActive, smoothedPath, update]
   );
 
   useAnimatedReaction(
@@ -163,7 +163,7 @@ export default function useAnimatedPath({
     if (previousPath.value && enabled) {
       function excludeSegment(a, b) {
         if (a.x === b.x) {
-          console.log('##################################',a.x, b.x)
+          console.log('excludeSegment',a.x, b.x)
           return true          
         }
         return false
