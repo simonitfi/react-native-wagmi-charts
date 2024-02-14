@@ -42,21 +42,23 @@ export default function useAnimatedArea({
 
   const smoothedArea = React.useMemo(() => {
     if (smoothData && smoothData.length && sTo < smoothData.length) {
-      const bPathIndex = findPathIndex({
-        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: gutter,
-          yDomain,
-          xDomain
-        }
-      }, areaBuffer.current)
+      if (smoothData[sTo].timestamp > 300000) {
+        const bPathIndex = findPathIndex({
+          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
+          meta: {
+            pathWidth: pathWidth,
+            height: height,
+            gutter: gutter,
+            yDomain,
+            xDomain
+          }
+        }, areaBuffer.current)
 
-      if (bPathIndex > -1) {
-        const res = areaBuffer.current[bPathIndex].data
-        areaBuffer.current.splice(bPathIndex, 1);
-        return res
+        if (bPathIndex > -1) {
+          const res = areaBuffer.current[bPathIndex].data
+          areaBuffer.current.splice(bPathIndex, 1);
+          return res
+        }
       }
       const result = getArea({
         data: smoothData,
@@ -96,11 +98,16 @@ export default function useAnimatedArea({
   ]);
 
   const transition = useSharedValue(0);
+  const allowMorph = useSharedValue(true);
 
   const currentArea = useSharedValue(smoothedArea);
   const previousArea = useSharedValue(smoothedArea);
 
   const area = useSharedValue('');
+
+  const enableMorph = () => {
+    setTimeout(() => allowMorph.value = true, 1000)
+  }
 
   const setArea = () => {
     if (data && data.length > 0) {
@@ -135,6 +142,10 @@ export default function useAnimatedArea({
       return isActive.value
     },
     (result, previous) => {
+      if (!!previous !== result) {
+        allowMorph.value = false
+        !result && runOnJS(enableMorph)()
+      }
       if (result && isLiveData) {
         runOnJS(setArea)()
       }
@@ -163,7 +174,8 @@ export default function useAnimatedArea({
 
   const animatedProps = useAnimatedProps(() => {
     let d = currentArea.value || '';
-    if (previousArea.value && enabled) {
+
+    if (previousArea.value && enabled && allowMorph.value && !isActive.value) {
       function excludeSegment(a, b) {
         if (a.x === b.x) {
           return true

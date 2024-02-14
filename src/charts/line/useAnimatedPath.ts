@@ -99,6 +99,12 @@ export default function useAnimatedPath({
 
   const path = useSharedValue('');
 
+  const allowMorph = useSharedValue(true);
+
+  const enableMorph = () => {
+    setTimeout(() => allowMorph.value = true, 1000)
+  }
+
   const setPath = () => {
     if (data && data.length > 0) {
       path.value = getPath({
@@ -132,6 +138,10 @@ export default function useAnimatedPath({
       return isActive.value
     },
     (result, previous) => {
+      if (!!previous !== result) {
+        allowMorph.value = false
+        !result && runOnJS(enableMorph)()
+      }
       if (result && isLiveData) {
           runOnJS(setPath)()
       }
@@ -160,10 +170,10 @@ export default function useAnimatedPath({
 
   const animatedProps = useAnimatedProps(() => {
     let d = currentPath.value || '';
-    if (previousPath.value && enabled) {
+    if (previousPath.value && enabled && allowMorph.value && !isActive.value) {
       function excludeSegment(a, b) {
         if (a.x === b.x) {
-          console.log('excludeSegment',a.x, b.x)
+          console.log('excludeSegment',a.x === b.x)
           return true          
         }
         return false
