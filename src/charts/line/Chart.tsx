@@ -89,10 +89,6 @@ export function LineChart({
 
   React.useEffect(() => {
     round.current++
-  }, []);
-
-  React.useEffect(() => {
-    round.current++
     if (round.current === 2) {
       setTimeout(() => {
         setUpdate(Date.now())
