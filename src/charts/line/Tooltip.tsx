@@ -51,7 +51,7 @@ export function LineChartTooltip({
   format,
   ...props
 }: LineChartTooltipProps) {
-  const { width, height, parsedPath, isOriginal, isLiveData, update } = React.useContext(
+  const { width, height, parsedPath, isOriginal, isLiveData, update, updateContext } = React.useContext(
     LineChartDimensionsContext
   );
   const { type } = React.useContext(CursorContext);
@@ -185,7 +185,7 @@ export function LineChartTooltip({
     let opacity = isActive.value ? 1 : 0;
     if (isStatic) {
       // Only show static when there is no active cursor
-      if (isActive.value)
+      if (isActive.value || (updateContext === 0 && !isLiveData))
         opacity = 0;
       else
         opacity = withTiming(1);
