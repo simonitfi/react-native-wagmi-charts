@@ -122,8 +122,8 @@ export function LineChartTooltip({
       elementHeightOriginal.value = elementHeight.value
     }
 
-    const ew = ((update !== 0 && !isLiveData) || (isActive.value && isLiveData)) ? elementWidthOriginal.value : elementWidth.value
-    const eh = ((update !== 0 && !isLiveData) || (isActive.value && isLiveData)) ? elementHeightOriginal.value : elementHeight.value
+    const ew = ((update !== 0 && !isLiveData) || (!isActive.value && isLiveData && Platform.OS === 'android')) ? elementWidthOriginal.value : elementWidth.value
+    const eh = ((update !== 0 && !isLiveData) || (!isActive.value && isLiveData)) ? elementHeightOriginal.value : elementHeight.value
 
     // console.log(ew, elementWidthOriginal.value, elementWidth.value, update)
     let translateXOffset
