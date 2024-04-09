@@ -41,7 +41,7 @@ export default function useAnimatedArea({
   if (to < 0) to = data.length - 1
 
   const smoothedArea = React.useMemo(() => {
-    if (smoothData && smoothData.length && sTo < smoothData.length) {
+    if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length) {
       if (smoothData[sTo].timestamp > 300000) {
         const bPathIndex = findPathIndex({
           from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
