@@ -6,7 +6,7 @@ export const smoothData_ = (data: TLineChartData) => {
   //let values = data.map((item: TLineChartPoint) => item.value);
   // const smoothed = smoothish(values, { radius: 2 });
   data.forEach(function (item: TLineChartPoint, i: number) {
-    item.smoothedValue = item.value
+    if (item) item.smoothedValue = item.value
   });
   return data;
 };

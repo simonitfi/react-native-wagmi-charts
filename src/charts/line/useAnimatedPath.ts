@@ -38,7 +38,7 @@ export default function useAnimatedPath({
   if (to < 0) to = data.length - 1
  
   const smoothedPath = React.useMemo(() => {
-    if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length) {
+    if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length && typeof smoothData[sFrom] !== undefined && typeof smoothData[sTo].smoothedValue !== undefined) {
       const bPathIndex = findPathIndex({
         from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
         meta: {

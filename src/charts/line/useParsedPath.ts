@@ -44,7 +44,7 @@ export default function useParsedPath({
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   const smoothedPath = React.useMemo(() => {
-    if (smoothData && smoothData.length > 1) {
+    if (smoothData && smoothData.length > 1 && typeof smoothData[0] !== undefined && typeof smoothData[smoothData.length - 1].smoothedValue !== undefined) {
       const bPathIndex = findPathIndex({
         from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
         fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
