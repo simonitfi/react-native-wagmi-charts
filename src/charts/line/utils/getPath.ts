@@ -45,17 +45,34 @@ export function getPath({
   const scaleY = scaleLinear()
     .domain([yDomain.min, yDomain.max])
     .range([height - gutter, gutter]);
-  const path = shape
-    .line()
-    .defined((d: { timestamp: number }) =>
-      from || to
-        ? data
-          .slice(from, to ? to + 1 : undefined)
-          .find((item) => item.timestamp === d.timestamp)
-        : true
-    )
-    .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))
-    .y((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
-    .curve(_shape)(data);
-  return path;
+
+  try {
+    const path = shape
+      .line()
+      .defined((d: { timestamp: number }) =>
+        from || to
+          ? data
+            .slice(from, to ? to + 1 : undefined)
+            .find((item) => item.timestamp === d.timestamp)
+          : true
+      )
+      .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))
+      .y((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
+      .curve(_shape)(data);
+    return path;
+  }
+  // Catch block to handle errors thrown in the try block
+  catch (error) {
+    // Check if the error is an instance of TypeError
+    if (error instanceof TypeError) {
+      // Log an error message indicating property access to an undefined object
+      console.error('Error: Property access to undefined object, getPath', error);
+    }
+    // If the error is not a TypeError, rethrow the error
+    else {
+      throw error; // Rethrow the error if it's not a TypeError
+    }
+  }
+  return '';
+
 }

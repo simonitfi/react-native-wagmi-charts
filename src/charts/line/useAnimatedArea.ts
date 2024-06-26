@@ -41,10 +41,40 @@ export default function useAnimatedArea({
   if (to < 0) to = data.length - 1
 
   const smoothedArea = React.useMemo(() => {
-    if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length && typeof smoothData[sFrom] !== undefined && typeof smoothData[sTo].smoothedValue !== undefined) {
-      if (smoothData[sTo].timestamp > 300000) {
-        const bPathIndex = findPathIndex({
-          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
+    try {
+      if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length && typeof smoothData[sFrom] !== undefined && typeof smoothData[sTo].smoothedValue !== undefined) {
+        if (smoothData[sTo].timestamp > 300000) {
+          const bPathIndex = findPathIndex({
+            from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
+            meta: {
+              pathWidth: pathWidth,
+              height: height,
+              gutter: gutter,
+              yDomain,
+              xDomain
+            }
+          }, areaBuffer.current)
+
+          if (bPathIndex > -1) {
+            const res = areaBuffer.current[bPathIndex].data
+            areaBuffer.current.splice(bPathIndex, 1);
+            return res
+          }
+        }
+        const result = getArea({
+          data: smoothData,
+          from: sFrom,
+          to: sTo,
+          width: pathWidth,
+          height,
+          gutter,
+          shape,
+          yDomain,
+          xDomain,
+          isOriginalData: false,
+        });
+        addPath({
+          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
           meta: {
             pathWidth: pathWidth,
             height: height,
@@ -53,36 +83,20 @@ export default function useAnimatedArea({
             xDomain
           }
         }, areaBuffer.current)
-
-        if (bPathIndex > -1) {
-          const res = areaBuffer.current[bPathIndex].data
-          areaBuffer.current.splice(bPathIndex, 1);
-          return res
-        }
+        return result
       }
-      const result = getArea({
-        data: smoothData,
-        from: sFrom,
-        to: sTo,
-        width: pathWidth,
-        height,
-        gutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: false,
-      });
-      addPath({
-        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: gutter,
-          yDomain,
-          xDomain
-        }
-      }, areaBuffer.current)
-      return result
+    }
+    // Catch block to handle errors thrown in the try block
+    catch (error) {
+      // Check if the error is an instance of TypeError
+      if (error instanceof TypeError) {
+        // Log an error message indicating property access to an undefined object
+        console.log('Error: Property access to undefined object, smoothedArea', error);
+      }
+      // If the error is not a TypeError, rethrow the error
+      else {
+        throw error; // Rethrow the error if it's not a TypeError
+      }
     }
     return '';
   }, [

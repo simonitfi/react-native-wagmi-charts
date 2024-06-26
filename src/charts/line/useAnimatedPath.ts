@@ -31,53 +31,67 @@ export default function useAnimatedPath({
   const { pathWidth, height, gutter, shape, isLiveData, update, pathBuffer } = React.useContext(
     LineChartDimensionsContext
   );
-  
+
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   if (sTo < 0) sTo = smoothData.length - 1
   if (to < 0) to = data.length - 1
- 
-  const smoothedPath = React.useMemo(() => {
-    if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length && typeof smoothData[sFrom] !== undefined && typeof smoothData[sTo].smoothedValue !== undefined) {
-      const bPathIndex = findPathIndex({
-        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: gutter,
-          yDomain,
-          xDomain
-        }
-      }, pathBuffer.current)
 
-      if (bPathIndex > -1) {
-        const res = pathBuffer.current[bPathIndex].data
-        pathBuffer.current.splice(bPathIndex, 1);
-        return res
-      }
-      const result = getPath({
-        data: smoothData,
-        from: sFrom,
-        to: sTo,
-        width: pathWidth,
-        height,
-        gutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: false,
-      });
-      addPath({
-        from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: gutter,
-          yDomain,
-          xDomain
+  const smoothedPath = React.useMemo(() => {
+    try {
+      if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length && typeof smoothData[sFrom] !== undefined && typeof smoothData[sTo].smoothedValue !== undefined) {
+        const bPathIndex = findPathIndex({
+          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
+          meta: {
+            pathWidth: pathWidth,
+            height: height,
+            gutter: gutter,
+            yDomain,
+            xDomain
+          }
+        }, pathBuffer.current)
+
+        if (bPathIndex > -1) {
+          const res = pathBuffer.current[bPathIndex].data
+          pathBuffer.current.splice(bPathIndex, 1);
+          return res
         }
-      }, pathBuffer.current)
-      return result
+        const result = getPath({
+          data: smoothData,
+          from: sFrom,
+          to: sTo,
+          width: pathWidth,
+          height,
+          gutter,
+          shape,
+          yDomain,
+          xDomain,
+          isOriginalData: false,
+        });
+        addPath({
+          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
+          meta: {
+            pathWidth: pathWidth,
+            height: height,
+            gutter: gutter,
+            yDomain,
+            xDomain
+          }
+        }, pathBuffer.current)
+        return result
+      }
+    }
+    // Catch block to handle errors thrown in the try block
+    catch (error) {
+      // Check if the error is an instance of TypeError
+      if (error instanceof TypeError) {
+        // Log an error message indicating property access to an undefined object
+        console.log('Error: Property access to undefined object, smoothedPath', error);
+      }
+      // If the error is not a TypeError, rethrow the error
+      else {
+        throw error; // Rethrow the error if it's not a TypeError
+      }
     }
     return '';
   }, [
@@ -119,13 +133,13 @@ export default function useAnimatedPath({
         xDomain,
         isOriginalData: true,
       });
-    }else{
+    } else {
       path.value = '';
     }
   }
 
   React.useEffect(() => {
-    if (update !== 0 && !isLiveData){
+    if (update !== 0 && !isLiveData) {
       setPath()
     }
   }, [height, gutter, shape, update, isLiveData]);
@@ -143,7 +157,7 @@ export default function useAnimatedPath({
         !result && runOnJS(enableMorph)()
       }
       if (result && isLiveData) {
-          runOnJS(setPath)()
+        runOnJS(setPath)()
       }
     },
     [isActive, smoothedPath, update]
@@ -151,7 +165,7 @@ export default function useAnimatedPath({
 
   useAnimatedReaction(
     () => {
-      if (currentPath.value !== path.value){
+      if (currentPath.value !== path.value) {
         previousPath.value = currentPath.value
         currentPath.value = path.value
         return currentPath.value;
@@ -173,8 +187,8 @@ export default function useAnimatedPath({
     if (previousPath.value && enabled && allowMorph.value && !isActive.value) {
       function excludeSegment(a, b) {
         if (a.x === b.x) {
-          console.log('excludeSegment',a.x === b.x)
-          return true          
+          console.log('excludeSegment', a.x === b.x)
+          return true
         }
         return false
       }

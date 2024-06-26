@@ -44,39 +44,12 @@ export default function useParsedPath({
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   const smoothedPath = React.useMemo(() => {
-    if (smoothData && smoothData.length > 1 && typeof smoothData[0] !== undefined && typeof smoothData[smoothData.length - 1].smoothedValue !== undefined) {
-      const bPathIndex = findPathIndex({
-        from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
-        fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
-        totalLength: smoothData.length, data: '',
-        meta: {
-          pathWidth: pathWidth,
-          height: height,
-          gutter: yGutter,
-          yDomain,
-          xDomain
-        }
-      }, pathBuffer.current)
-      if (bPathIndex > -1) {
-        const res = pathBuffer.current[bPathIndex].data
-        pathBuffer.current.splice(bPathIndex, 1);
-        return res
-      }
-      const result = getPath({
-        data: smoothData,//smoothData_(smoothData),
-        width: pathWidth,
-        height,
-        gutter: yGutter,
-        shape,
-        yDomain,
-        xDomain,
-        isOriginalData: false,
-      });
-      if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
-        addPath({
+    try {
+      if (smoothData && smoothData.length > 1 && typeof smoothData[0] !== undefined && typeof smoothData[smoothData.length - 1].smoothedValue !== undefined) {
+        const bPathIndex = findPathIndex({
           from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
           fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
-          totalLength: smoothData.length, data: result,
+          totalLength: smoothData.length, data: '',
           meta: {
             pathWidth: pathWidth,
             height: height,
@@ -85,7 +58,48 @@ export default function useParsedPath({
             xDomain
           }
         }, pathBuffer.current)
-      return result
+        if (bPathIndex > -1) {
+          const res = pathBuffer.current[bPathIndex].data
+          pathBuffer.current.splice(bPathIndex, 1);
+          return res
+        }
+        const result = getPath({
+          data: smoothData,//smoothData_(smoothData),
+          width: pathWidth,
+          height,
+          gutter: yGutter,
+          shape,
+          yDomain,
+          xDomain,
+          isOriginalData: false,
+        });
+        if (typeof smoothData[smoothData.length - 1].smoothedValue === 'number' && typeof smoothData[0].smoothedValue === 'number')
+          addPath({
+            from: 0, to: smoothData.length - 1, fromData: smoothData[0].smoothedValue, toData: smoothData[smoothData.length - 1].smoothedValue,
+            fromTime: smoothData[0].timestamp, toTime: smoothData[smoothData.length - 1].timestamp, timeTolerance: 0,
+            totalLength: smoothData.length, data: result,
+            meta: {
+              pathWidth: pathWidth,
+              height: height,
+              gutter: yGutter,
+              yDomain,
+              xDomain
+            }
+          }, pathBuffer.current)
+        return result
+      }
+    }
+    // Catch block to handle errors thrown in the try block
+    catch (error) {
+      // Check if the error is an instance of TypeError
+      if (error instanceof TypeError) {
+        // Log an error message indicating property access to an undefined object
+        console.log('Error: Property access to undefined object, useParsedPath', error);
+      }
+      // If the error is not a TypeError, rethrow the error
+      else {
+        throw error; // Rethrow the error if it's not a TypeError
+      }
     }
     return '';
   }, [
@@ -119,10 +133,10 @@ export default function useParsedPath({
     }
   }, [isOriginal, smoothedPath]);
 
-  const parsedPath =  React.useMemo(() => {
+  const parsedPath = React.useMemo(() => {
     if (isOriginal) return parse(path)
-   return smoothedParsedPath
-  }, [isOriginal, path]);  
+    return smoothedParsedPath
+  }, [isOriginal, path]);
 
   React.useEffect(() => {
     if (update !== 0 && !isLiveData) {

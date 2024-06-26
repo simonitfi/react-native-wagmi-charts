@@ -47,17 +47,33 @@ export function getArea({
   const scaleY = scaleLinear()
     .domain([yDomain.min, yDomain.max])
     .range([height - gutter, gutter]);
-  const area = shape
-    .area().defined((d: { timestamp: number }) =>
-      from || to
-        ? data
-          .slice(from, to ? to + 1 : undefined)
-          .find((item) => item.timestamp === d.timestamp)
-        : true
-    )
-    .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))
-    .y0((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
-    .y1(() => height)
-    .curve(_shape)(data);
-  return area;
+
+  try {
+    const area = shape
+      .area().defined((d: { timestamp: number }) =>
+        from || to
+          ? data
+            .slice(from, to ? to + 1 : undefined)
+            .find((item) => item.timestamp === d.timestamp)
+          : true
+      )
+      .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))
+      .y0((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
+      .y1(() => height)
+      .curve(_shape)(data);
+    return area;
+  }
+  // Catch block to handle errors thrown in the try block
+  catch (error) {
+    // Check if the error is an instance of TypeError
+    if (error instanceof TypeError) {
+      // Log an error message indicating property access to an undefined object
+      console.error('Error: Property access to undefined object, getArea', error);
+    }
+    // If the error is not a TypeError, rethrow the error
+    else {
+      throw error; // Rethrow the error if it's not a TypeError
+    }
+  }
+  return '';
 }
