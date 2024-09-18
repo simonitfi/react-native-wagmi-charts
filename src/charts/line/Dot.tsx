@@ -196,6 +196,7 @@ const useAnimatedDot = (x: Readonly<Animated.SharedValue<number>>, y: Readonly<A
       const easing = Easing.out(Easing.sin);
       animatedOpacity.value = withRepeat(
         withSequence(
+          withTiming(0),
           withTiming(0.8),
           withTiming(0, {
             duration: pulseDurationMs,
@@ -207,6 +208,7 @@ const useAnimatedDot = (x: Readonly<Animated.SharedValue<number>>, y: Readonly<A
       );
       scale.value = withRepeat(
         withSequence(
+          withTiming(0),
           withTiming(0),
           withTiming(outerSize, {
             duration: pulseDurationMs,
