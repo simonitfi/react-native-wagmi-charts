@@ -98,19 +98,17 @@ export function LineChart({
 
   const pathWidth = React.useMemo(() => {
     let allowedWidth = width;
-    if (xLength > data.length) {
+    if (data && xLength > data.length) {
       allowedWidth = (width * data.length) / xLength;
     }
     // On WEb force update
     Platform.OS === 'web' && setUpdate(Date.now())
     return allowedWidth;
-  }, [data.length, width, xLength]);
-
-  const dataLength = data.length;
+  }, [data, width, xLength]);
 
   const pointWidth = React.useMemo(
-    () => width / (dataLength - 1),
-    [dataLength, width]
+    () => width / (data ? data.length - 1 : 1),
+    [data, width]
   );
 
   const { parsedPath, path, isOriginal } = useParsedPath({

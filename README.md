@@ -358,6 +358,17 @@ function Example() {
 }
 ```
 
+If you want to synchronize two graphs, or even initialize a new graph with a cursor position, you can use the `at` prop:
+
+```tsx
+<LineChart.Provider data={data}>
+  <LineChart>
+    <LineChart.Path />
+    <LineChart.CursorLine at={Math.floor(data.length / 2)} />
+  </LineChart>
+</LineChart.Provider>
+```
+
 ### Colors
 
 By default, the charts come with default colors out-of-the-box... But you probably will want to change these to suit your brand.
@@ -386,7 +397,7 @@ To customise the color of the line chart cursor, supply a `color` prop to `LineC
 <LineChart.Provider data={data}>
   <LineChart>
     <LineChart.Path color="hotpink" />
-    <LineChart.CursorCrosshair color="hotpink />
+    <LineChart.CursorCrosshair color="hotpink" />
   </LineChart>
 </LineChart.Provider>
 ```
@@ -405,7 +416,7 @@ To achieve this, simply add `<LineChart.HoverTrap />` as the child of your curso
 <LineChart.Provider data={data}>
   <LineChart>
     <LineChart.Path color="hotpink" />
-    <LineChart.CursorCrosshair color="hotpink>
+    <LineChart.CursorCrosshair color="hotpink">
       <LineChart.HoverTrap />
     </LineChart.CursorCrosshair>
   </LineChart>
@@ -847,6 +858,7 @@ To customize the formatting of the date/time text, you can supply a `format` fun
 | `crosshairProps`        | `ViewProps`                    |           | Props of the crosshair dot                                            |
 | `crosshairOuterProps`   | `ViewProps`                    |           | Props of the crosshair outer dot                                      |
 | `snapToPoint`           | `boolean`                      | `false`   | **REACT NATIVE ONLY** Snap cursor to X position of nearest data point |
+| `at`                    | `number`                       |           | Index of followed `data` item.                                        |
 | `...props`              | `LongPressGestureHandlerProps` |           |                                                                       |
 
 ### LineChart.CursorLine
@@ -855,6 +867,7 @@ To customize the formatting of the date/time text, you can supply a `format` fun
 | ----------- | ----------- | -------- | ---------------------------------------------------------------- |
 | `color`     | `string`    | `"gray"` | Color of the cursor line                                         |
 | `lineProps` | `LineProps` |          | Props of the cursor line. Takes React Native SVG's `Line` props. |
+| `at`        | `number`    |          | Index of followed `data` item.                                   |
 
 ### LineChart.Dot
 
@@ -1020,12 +1033,12 @@ const { currentX, currentY, currentIndex, data, domain, isActive } =
 
 | Variable       | Type                                          | Default | Description                     |
 | -------------- | --------------------------------------------- | ------- | ------------------------------- |
-| `currentX`     | `Animated.SharedValue<number>`                |         | Current x position              |
-| `currentY`     | `Animated.SharedValue<number>`                |         | Current y position              |
-| `currentIndex` | `Animated.SharedValue<number>`                |         | Current index of the data       |
+| `currentX`     | `SharedValue<number>`                |         | Current x position              |
+| `currentY`     | `SharedValue<number>`                |         | Current y position              |
+| `currentIndex` | `SharedValue<number>`                |         | Current index of the data       |
 | `data`         | `Array<{ timestamp: number, value: number }>` |         | Data of the chart               |
 | `domain`       | `[number, number]`                            |         | Y domain of the chart           |
-| `isActive`     | `Animated.SharedValue<boolean>`               |         | Is the chart active by gesture? |
+| `isActive`     | `SharedValue<boolean>`               |         | Is the chart active by gesture? |
 
 ### LineChart.useDatetime
 
@@ -1090,8 +1103,8 @@ const { currentX, currentY, data, domain, step } = CandlestickChart.useChart();
 
 | Variable   | Type                                                                                   | Default | Description               |
 | ---------- | -------------------------------------------------------------------------------------- | ------- | ------------------------- |
-| `currentX` | `Animated.SharedValue<number>`                                                         |         | Current x position        |
-| `currentY` | `Animated.SharedValue<number>`                                                         |         | Current y position        |
+| `currentX` | `SharedValue<number>`                                                         |         | Current x position        |
+| `currentY` | `SharedValue<number>`                                                         |         | Current y position        |
 | `data`     | `Array<{ timestamp: number, open: number, high: number, low: number, close: number }>` |         | Data of the chart         |
 | `domain`   | `[number, number]`                                                                     |         | Y domain of the chart     |
 | `step`     | `number`                                                                               |         | Current index of the data |

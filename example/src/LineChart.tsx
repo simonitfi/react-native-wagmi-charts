@@ -30,6 +30,7 @@ export default function App() {
     (state) => !state,
     false
   );
+  const [at, setAt] = React.useState<number>();
 
   const [scaleRelativeToTime, setScaleRelativeToTime] = React.useState(false);
 
@@ -51,6 +52,7 @@ export default function App() {
 
   const [toggleMinMaxLabels, setToggleMinMaxLabels] = React.useState(false);
   const [toggleSnapToPoint, setToggleSnapToPoint] = React.useState(false);
+  const [toggleHighlight, setToggleHighlight] = React.useState(false);
 
   let dataProp: TLineChartDataProp = data;
   const [min, max] = useMemo(() => {
@@ -68,29 +70,27 @@ export default function App() {
 
   let chart = (
     <LineChart>
-      {!toggleMinMaxLabels && <LineChart.Path color="black" />}
-      {toggleMinMaxLabels && (
-        <LineChart.Path color="black">
-          <LineChart.Gradient color="black" />
-          <LineChart.Tooltip position="top" at={max} />
-          <LineChart.Tooltip position="bottom" at={min} yGutter={-10} />
-        </LineChart.Path>
-      )}
-      {/* <LineChart.Path color="black">
-        <LineChart.Gradient color="black" />
-        <LineChart.HorizontalLine at={{ index: 0 }} />
-        <LineChart.Highlight color="red" from={10} to={15} />
-        <LineChart.Dot color="red" at={10} />
-        <LineChart.Dot color="red" at={15} />
-        {partialDay && (
-          <LineChart.Dot at={data.length - 1} color="red" hasPulse />
+      <LineChart.Path color="black">
+        {toggleMinMaxLabels && (
+          <>
+            <LineChart.Gradient color="black" />
+            <LineChart.Tooltip position="top" at={max} />
+            <LineChart.Tooltip position="bottom" at={min} yGutter={-10} />
+          </>
+        )}
+        {toggleHighlight && (
+          <LineChart.Highlight
+            color="red"
+            from={Math.floor(data.length / 3)}
+            to={Math.floor(data.length * (2 / 3))}
+          />
         )}
       </LineChart.Path>
-        */}
       <LineChart.CursorCrosshair
         snapToPoint={toggleSnapToPoint}
         onActivated={invokeHaptic}
         onEnded={invokeHaptic}
+        at={at}
       >
         <LineChart.Tooltip position="top" />
         <LineChart.HoverTrap />
@@ -141,7 +141,7 @@ export default function App() {
       <LineChart.Provider
         xDomain={
           scaleRelativeToTime
-            ? [data[0].timestamp, data[data.length - 1].timestamp]
+            ? [data[0]!.timestamp, data[data.length - 1]!.timestamp]
             : undefined
         }
         xLength={partialDay ? data.length * 2 : undefined}
@@ -159,8 +159,8 @@ export default function App() {
       >
         {chart}
         <Box marginX="major-2" marginTop="major-2">
-          <Heading.H6 marginBottom={'major-2'}>Load Data</Heading.H6>
-          <Flex flexWrap={'wrap'}>
+          <Heading.H6 marginBottom="major-2">Load Data</Heading.H6>
+          <Flex flexWrap="wrap">
             <Button onPress={() => setData(mockData)}>Data 1</Button>
             <Button onPress={() => setData(mockData2)}>Data 2</Button>
             <Button onPress={() => setData(mockDataNonLinear)}>Data 3</Button>
@@ -198,22 +198,26 @@ export default function App() {
             <Button onPress={toggleYRange}>
               {`${yRange || 'Set'} Y Domain`}
             </Button>
-            <Button onPress={toggleMultiData}>{`Multi Data`}</Button>
-            <Button onPress={togglePartialDay}>{`Partial Day`}</Button>
-            <Button
-              onPress={() => setToggleMinMaxLabels((p) => !p)}
-            >{`Toggle min/max labels`}</Button>
+            <Button onPress={toggleMultiData}>Multi Data</Button>
+            <Button onPress={togglePartialDay}>Partial Day</Button>
+            <Button onPress={() => setToggleHighlight((val) => !val)}>
+              Toggle highlight
+            </Button>
+            <Button onPress={() => setToggleMinMaxLabels((p) => !p)}>
+              Toggle min/max labels
+            </Button>
             <Button
               onPress={() => {
                 // Use with data 3 for best demonstration
                 setScaleRelativeToTime((val) => !val);
               }}
             >
-              {`Toggle ${scaleRelativeToTime ? 'off' : 'on'} XDomain`}
+              Toggle {scaleRelativeToTime ? 'off' : 'on'} XDomain
             </Button>
-            <Button
-              onPress={() => setToggleSnapToPoint((val) => !val)}
-            >{`Toggle Snap ${toggleSnapToPoint ? 'Off' : 'On'}`}</Button>
+            <Button onPress={() => setToggleSnapToPoint((val) => !val)}>
+              Toggle Snap {toggleSnapToPoint ? 'Off' : 'On'}
+            </Button>
+            <Button onPress={() => setAt(Math.floor(Math.random() * data.length))}>Set Cursor</Button>
           </Flex>
         </Box>
         {!multiData && (

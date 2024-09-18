@@ -1,5 +1,4 @@
-import React from 'react';
-import { ReactNode, Children, cloneElement } from 'react';
+import React, { ReactNode, Children, cloneElement } from 'react';
 import { ViewProps, View } from 'react-native';
 import flattenChildren from 'react-keyed-flatten-children';
 

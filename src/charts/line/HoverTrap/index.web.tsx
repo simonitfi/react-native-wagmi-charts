@@ -4,7 +4,6 @@ import { View, StyleSheet } from 'react-native';
 import { LineChartDimensionsContext } from '../Chart';
 import { useLineChart } from '../useLineChart';
 
-// @ts-expect-error missing types
 import { canUseDOM } from 'fbjs/lib/ExecutionEnvironment';
 
 let isEnabled = false;
@@ -66,7 +65,7 @@ export const LineChartHoverTrap = () => {
           const minIndex = 0;
           const boundedIndex = Math.max(
             minIndex,
-            Math.round(boundedX / width / (1 / (data.length - 1)))
+            Math.round(boundedX / width / (1 / (data ? data.length - 1 : 1)))
           );
 
           currentIndex.value = boundedIndex;
@@ -76,7 +75,7 @@ export const LineChartHoverTrap = () => {
         currentIndex.value = -1;
       }
     },
-    [currentIndex, currentX, data.length, isActive, parsedPath, width]
+    [currentIndex, currentX, data, isActive, parsedPath, width]
   );
 
   const onMouseLeave = React.useCallback(() => {

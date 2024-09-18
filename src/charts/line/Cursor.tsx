@@ -16,12 +16,14 @@ import { StyleSheet } from 'react-native';
 import { bisectCenter } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import { useLineChart } from './useLineChart';
+import { useEffect } from "react";
 
 export type LineChartCursorProps = LongPressGestureHandlerProps & {
   children: React.ReactNode;
   type: 'line' | 'crosshair';
   // Does not work on web due to how the Cursor operates on web
   snapToPoint?: boolean;
+  at?: number;
 };
 
 export const CursorContext = React.createContext({ type: '' });
@@ -32,6 +34,7 @@ export function LineChartCursor({
   children,
   snapToPoint,
   type,
+  at,
   ...props
 }: LineChartCursorProps) {
   const { pathWidth: width, parsedPath } = React.useContext(
@@ -39,7 +42,7 @@ export function LineChartCursor({
   );
   const { currentX, currentIndex, isActive, data, xDomain } = useLineChart();
   const xValues = React.useMemo(
-    () => data.map(({ timestamp }, i) => (xDomain ? timestamp : i)),
+    () => (data ?? []).map(({ timestamp }, i) => (xDomain ? timestamp : i)),
     [data, xDomain]
   );
 
@@ -70,7 +73,7 @@ export function LineChartCursor({
 
     const newXPosition = (
       closestIndex > 0
-        ? parsedPath.curves[closestPathCurve].to
+        ? parsedPath.curves[closestPathCurve]!.to
         : parsedPath.move
     ).x;
     // Update values
@@ -78,9 +81,15 @@ export function LineChartCursor({
     currentX.value = newXPosition;
   };
 
-  const onGestureEvent = useAnimatedGestureHandler<
-    GestureEvent<LongPressGestureHandlerEventPayload>
-  >({
+  useEffect(() => {
+    if (at !== undefined) {
+      const xPosition = scaleX(at);
+      runOnJS(linearScalePositionAndIndex)({ xPosition });
+      isActive.value = true;
+    }
+  }, [at, scaleX]);
+
+  const onGestureEvent = useAnimatedGestureHandler<GestureEvent<LongPressGestureHandlerEventPayload>>({
     onActive: ({ x }) => {
       if (parsedPath) {
         const xPosition = Math.max(0, x <= width ? x : width);
@@ -92,7 +101,7 @@ export function LineChartCursor({
         const minIndex = 0;
         const boundedIndex = Math.max(
           minIndex,
-          Math.round(xPosition / width / (1 / (data.length - 1)))
+          Math.round(xPosition / width / (1 / (data ? data.length - 1 : 1)))
         );
 
         if (snapToPoint) {

@@ -1,7 +1,7 @@
-import type { TLineChartData } from './types';
 import React, { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import type { TLineChartDataProp } from './types';
+
+import type { TLineChartData, TLineChartDataProp } from './types';
 
 export const DefaultLineChartId = '__LineChartData';
 
