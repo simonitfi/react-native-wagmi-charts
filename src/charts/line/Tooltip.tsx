@@ -103,7 +103,7 @@ const atYPosition = useDerivedValue(() => {
     val = maxPoint.y;
   }
   return val || 0;
-}, [atXPosition]);
+}, [atXPosition.value]);
 
   const animatedCursorStyle = useAnimatedStyle(() => {
     if (elementWidth.value === xGutter) {
