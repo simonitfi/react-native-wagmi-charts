@@ -14,7 +14,6 @@ import { Platform, type LayoutChangeEvent, type ViewProps } from 'react-native';
 import type { TFormatterFn } from '../candle/types';
 import { getYForX } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
-import { useMemo } from 'react';
 
 export type LineChartTooltipProps = Animated.AnimateProps<ViewProps> & {
   children?: React.ReactNode;
@@ -84,29 +83,27 @@ export function LineChartTooltip({
     [elementHeight, elementWidth, elementWidthOriginal, elementHeightOriginal, x, isOriginal, isLiveData]
   );
 
-  // When the user set a `at` index, get the index's y & x positions
-  const atXPosition = useMemo(
-    () => {
-      const at_ = isOriginal ? at : sAt
-      const result = at_ !== null && at_ !== undefined
-        ? at_ === 0
-          ? 0
-          : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x
-        : undefined
-      return result
-    },
-    [at, sAt, parsedPath, isOriginal]
-  );
+// When the user set a `at` index, get the index's y & x positions
+const atXPosition = useDerivedValue(() => {
+  const at_ = isOriginal ? at : sAt;
+  if (at_ !== null && at_ !== undefined) {
+    return at_ === 0
+      ? 0
+      : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x;
+  }
+  return undefined;
+}, [at, sAt, parsedPath.curves, isOriginal]);
 
-  const atYPosition = useDerivedValue(() => {
-    if (atXPosition == null) return undefined
-    let val = getYForX(parsedPath, atXPosition)
-    if (val === null) {
-      let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
-      val = maxPoint.y;
-    }
-    return val || 0
-  }, [atXPosition]);
+
+const atYPosition = useDerivedValue(() => {
+  if (atXPosition.value == null) return undefined;
+  let val = getYForX(parsedPath, atXPosition.value);
+  if (val === null) {
+    let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
+    val = maxPoint.y;
+  }
+  return val || 0;
+}, [atXPosition]);
 
   const animatedCursorStyle = useAnimatedStyle(() => {
     if (elementWidth.value === xGutter) {
@@ -131,9 +128,9 @@ export function LineChartTooltip({
     const isStatic = atYPosition.value != null;
 
     // Calculate X position:
-    const x = atXPosition ?? currentX.value;
+    const x = atXPosition.value ?? currentX.value;
 
-    if (Platform.OS !== 'web'){
+    if (Platform.OS !== 'web') {
       translateXOffset = ew / 2
       if (x < ew / 2 + xGutter) {
         const xOffset = ew / 2 + xGutter - x;
@@ -143,7 +140,7 @@ export function LineChartTooltip({
         const xOffset = x - (width - ew / 2 - xGutter);
         translateXOffset = translateXOffset + xOffset;
       }
-    }else{
+    } else {
       translateXOffset = ew / 8
       if (x < ew / 8 + xGutter) {
         const xOffset = ew / 8 + xGutter - x;
@@ -208,7 +205,6 @@ export function LineChartTooltip({
       opacity = 0
     }
 
-
     return {
       transform: [
         { translateX: x - translateXOffset },
@@ -222,7 +218,7 @@ export function LineChartTooltip({
     isOriginal,
     isLiveData,
     update,
-    atXPosition,
+    atXPosition.value,
     atYPosition.value,
     currentX.value,
     currentY.value,
