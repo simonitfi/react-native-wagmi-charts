@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import Animated, {
+  AnimatedProps,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -15,7 +16,7 @@ import type { TFormatterFn } from '../candle/types';
 import { getYForX } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
 
-export type LineChartTooltipProps = Animated.AnimateProps<ViewProps> & {
+export type LineChartTooltipProps = AnimatedProps<ViewProps> & {
   children?: React.ReactNode;
   xGutter?: number;
   yGutter?: number;
@@ -62,6 +63,16 @@ export function LineChartTooltip({
   const elementWidthOriginal = useSharedValue(xGutter);
   const elementHeightOriginal = useSharedValue(yGutter);
 
+  const { minIndex, maxIndex } = React.useMemo(() => {
+    const minIndex = data.findIndex((element: { value: null }) => element.value !== null);
+    const maxIndex =
+      minIndex !== 0 || data.findIndex((element: { value: null }) => element.value === null) === -1
+        ? data.length - 1
+        : data.findIndex((element: { value: null }) => element.value === null) - 1;
+
+    return { minIndex, maxIndex };
+  }, [data]);
+
   const handleLayout = React.useCallback(
     (event: LayoutChangeEvent) => {
       x.value = event.nativeEvent.layout.x;
@@ -83,29 +94,38 @@ export function LineChartTooltip({
     [elementHeight, elementWidth, elementWidthOriginal, elementHeightOriginal, x, isOriginal, isLiveData]
   );
 
-// When the user set a `at` index, get the index's y & x positions
-const atXPosition = useDerivedValue(() => {
-  const at_ = isOriginal ? at : sAt;
-  if (at_ !== null && at_ !== undefined) {
-    return at_ === 0
-      ? 0
-      : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x;
-  }
-  return undefined;
-}, [at, sAt, parsedPath.curves, isOriginal]);
+  // When the user set a `at` index, get the index's y & x positions
+  const atXPosition = useDerivedValue(() => {
+    const at_ = isOriginal ? at : sAt;
+    if (at_ !== null && at_ !== undefined) {
+      return at_ === 0
+        ? 0
+        : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x;
+    }
+    return undefined;
+  }, [at, sAt, parsedPath.curves, isOriginal]);
 
 
-const atYPosition = useDerivedValue(() => {
-  if (atXPosition.value == null) return undefined;
-  let val = getYForX(parsedPath, atXPosition.value);
-  if (val === null) {
-    let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
-    val = maxPoint.y;
-  }
-  return val || 0;
-}, [atXPosition]);
+  const atYPosition = useDerivedValue(() => {
+    if (atXPosition.value == null) return undefined;
+    let val = getYForX(parsedPath, atXPosition.value);
+    if (val === null) {
+      let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
+      val = maxPoint.y;
+    }
+    return val || 0;
+  }, [atXPosition.value]);
 
   const animatedCursorStyle = useAnimatedStyle(() => {
+    if (!data) {
+      return {
+        transform: [
+          { translateX: 0 },
+          { translateY: 0 },
+        ]
+      };
+    }
+
     if (elementWidth.value === xGutter) {
       elementWidth.value = elementWidthOriginal.value
     }
@@ -125,10 +145,38 @@ const atYPosition = useDerivedValue(() => {
     // console.log(ew, elementWidthOriginal.value, elementWidth.value, update)
     let translateXOffset
     // the tooltip is considered static when the user specified an `at` prop 
-    const isStatic = atYPosition.value != null;
+    let isStatic = atYPosition.value != null;
 
+    // Set from and to depending on null values on data
+    const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
+    const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
+    const minVal = xDomain ? data[minIndex].timestamp : minIndex
+    const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
+    /*  
+      if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
+        opacity = 0
+      }
+  */
     // Calculate X position:
-    const x = atXPosition.value ?? currentX.value;
+    let x
+    let y
+
+    if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
+      // console.log('current out of x', atXPosition.value, atYPosition.value, currentY.value, currentX.value, maxIndex)
+      //opacity = 0
+      x = parsedPath.curves[Math.min(maxIndex, parsedPath.curves.length) - 1].to.x
+      y = getYForX(parsedPath, x);
+      if (y === null) {
+        let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
+        y = maxPoint.y;
+      }
+      //console.log('VVV', x, y)
+    } else {
+      x = atXPosition.value ?? currentX.value;
+      y = atYPosition.value ?? currentY.value;
+      //console.log('XXX of x', x, y)
+    }
+
 
     if (Platform.OS !== 'web') {
       translateXOffset = ew / 2
@@ -154,7 +202,7 @@ const atYPosition = useDerivedValue(() => {
 
     // Calculate Y position:
     let translateYOffset = 0;
-    const y = atYPosition.value ?? currentY.value;
+
     if (position === 'top') {
       translateYOffset = eh / 2 + cursorGutter;
       if (y - translateYOffset < yGutter) {
@@ -186,23 +234,6 @@ const atYPosition = useDerivedValue(() => {
         opacity = 0;
       else
         opacity = withTiming(1);
-    }
-
-    // Set from and to depending on null values on data
-    const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
-    const minIndex = data.findIndex((element: { value: null; }) => element.value !== null);
-    const maxIndex = minIndex !== 0 || data.findIndex((element: { value: null; }) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element: { value: null; }) => element.value === null) - 1;
-
-    const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
-    const minVal = xDomain ? data[minIndex].timestamp : minIndex
-    const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
-    /*  
-      if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
-        opacity = 0
-      }
-  */
-    if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
-      opacity = 0
     }
 
     return {
@@ -252,7 +283,7 @@ const atYPosition = useDerivedValue(() => {
       ]}
     >
       {children || (
-        <LineChartPriceText index={at} style={[textStyle]} {...textProps} format={format} />
+        <LineChartPriceText index={at ?? (data[maxIndex].timestamp !== xDomain[1] ? maxIndex : undefined)} style={[textStyle]} {...textProps} format={format} />
       )}
     </Animated.View>
   );

@@ -12,6 +12,7 @@ import Animated, {
   useAnimatedStyle,
   useAnimatedReaction,
   runOnJS,
+  AnimatedProps,
 } from 'react-native-reanimated';
 import { clamp } from 'react-native-redash';
 
@@ -24,8 +25,8 @@ type CandlestickChartCrosshairProps = LongPressGestureHandlerProps & {
   color?: string;
   children?: React.ReactNode;
   onCurrentXChange?: (value: number) => unknown;
-  horizontalCrosshairProps?: Animated.AnimateProps<ViewProps>;
-  verticalCrosshairProps?: Animated.AnimateProps<ViewProps>;
+  horizontalCrosshairProps?: AnimatedProps<ViewProps>;
+  verticalCrosshairProps?: AnimatedProps<ViewProps>;
   lineProps?: Partial<CandlestickChartLineProps>;
 };
 

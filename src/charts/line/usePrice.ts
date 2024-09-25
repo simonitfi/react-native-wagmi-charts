@@ -5,7 +5,6 @@ import { formatPrice, akimaCubicInterpolation, precalculate } from '../../utils'
 import type { TFormatterFn } from '../candle/types';
 import { useLineChart } from './useLineChart';
 import { LineChartDimensionsContext } from './Chart';
-import { TLineChartPoint } from 'react-native-wagmi-charts/src/charts/line/types';
 
 export function useLineChartPrice({
   format,
@@ -16,11 +15,16 @@ export function useLineChartPrice({
   const { height, pathWidth, width } = React.useContext(
     LineChartDimensionsContext
   );
+  
   const [update, setUpdate] = React.useState(0);
 
   const float = useDerivedValue(() => {
     if (index !== null && !isActive.value) {
       const res = data[Math.min(index ?? currentIndex.value, data.length - 1)]?.value;
+      if (typeof res === 'number') return res.toFixed(precision).toString();
+    }
+    if (index !== null && isActive.value) {
+      const res = data[Math.min(index, data.length - 1)]?.value;
       if (typeof res === 'number') return res.toFixed(precision).toString();
     }
     if (currentIndex.value && data[Math.min(currentIndex.value, data.length - 1)]?.value === null) {
@@ -60,6 +64,7 @@ export function useLineChartPrice({
     }
     return ''
   }, [currentIndex, isActive, data, precision]);
+  
   const formatted = useDerivedValue(() => {
     let value = float.value || '';
     const formattedPrice = value ? formatPrice({ value }) : '';

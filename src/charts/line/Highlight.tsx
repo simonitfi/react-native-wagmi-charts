@@ -1,5 +1,5 @@
 import * as React from 'react';
-import Animated from 'react-native-reanimated';
+import Animated, { AnimatedProps } from 'react-native-reanimated';
 import { Path, PathProps } from 'react-native-svg';
 
 import { LineChartPathContext } from './LineChartPathContext';
@@ -8,7 +8,7 @@ import { useLineChart } from './useLineChart';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-export type LineChartColorProps = Animated.AnimateProps<PathProps> & {
+export type LineChartColorProps = AnimatedProps<PathProps> & {
   color?: string;
   from: number;
   to: number;

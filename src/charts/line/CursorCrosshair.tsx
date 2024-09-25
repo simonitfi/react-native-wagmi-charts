@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Platform, View, ViewProps } from 'react-native';
 import Animated, {
+  AnimatedProps,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
@@ -17,7 +18,7 @@ type LineChartCursorCrosshairProps = Omit<
   color?: string;
   size?: number;
   outerSize?: number;
-  crosshairWrapperProps?: Animated.AnimateProps<ViewProps>;
+  crosshairWrapperProps?: AnimatedProps<ViewProps>;
   crosshairProps?: ViewProps;
   crosshairOuterProps?: ViewProps;
 };

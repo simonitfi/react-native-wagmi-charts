@@ -1,7 +1,9 @@
 import * as React from 'react';
 
 import Animated, {
+  AnimatedProps,
   Easing,
+  SharedValue,
   useAnimatedProps,
   useDerivedValue,
   useSharedValue,
@@ -20,8 +22,8 @@ import { useLineChart } from './useLineChart';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export type LineChartDotProps = {
-  dotProps?: Animated.AnimateProps<CircleProps>;
-  outerDotProps?: Animated.AnimateProps<CircleProps>;
+  dotProps?: AnimatedProps<CircleProps>;
+  outerDotProps?: AnimatedProps<CircleProps>;
   color?: string;
   inactiveColor?: string;
   showInactiveColor?: boolean;
@@ -187,16 +189,16 @@ export function LineChartDot({
   );
 }
 
-const useAnimatedDot = (x: Readonly<Animated.SharedValue<number>>, y: Readonly<Animated.SharedValue<number>>, hasPulse: boolean,
-  isActive: Animated.SharedValue<boolean>, outerSize: number, pulseBehaviour: "always" | "while-inactive", pulseDurationMs: number) => {
-    const animatedOpacity = useSharedValue(0.1);
-    const scale = useSharedValue(outerSize);
+const useAnimatedDot = (x: Readonly<SharedValue<number>>, y: Readonly<SharedValue<number>>, hasPulse: boolean,
+  isActive: SharedValue<boolean>, outerSize: number, pulseBehaviour: "always" | "while-inactive", pulseDurationMs: number) => {
+    const animatedOpacity = useSharedValue(0);
+    const scale = useSharedValue(0);
   
     React.useEffect(() => {
       const easing = Easing.out(Easing.sin);
       animatedOpacity.value = withRepeat(
         withSequence(
-          withTiming(0.8),
+          withTiming(1),
           withTiming(0, {
             duration: pulseDurationMs,
             easing,

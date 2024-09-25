@@ -50,6 +50,13 @@ export function useLineChartDatetime({
         const precalculated = precalculate(timeX, dataY);
         const res = akimaCubicInterpolation(timeX, dataY, currentX.value, precalculated)
         if (typeof res === 'number') return res
+      } else {
+        const minIndex = data.findIndex((element: { value: null }) => element.value !== null);
+        const maxIndex =
+          minIndex !== 0 || data.findIndex((element: { value: null }) => element.value === null) === -1
+            ? data.length - 1
+            : data.findIndex((element: { value: null }) => element.value === null) - 1;
+        if (data[maxIndex]?.timestamp) return data[maxIndex]?.timestamp
       }
     }
     return '';
