@@ -283,7 +283,7 @@ export function LineChartTooltip({
       ]}
     >
       {children || (
-        <LineChartPriceText index={at ?? (data[maxIndex].timestamp !== xDomain[1] ? maxIndex : undefined)} style={[textStyle]} {...textProps} format={format} />
+        <LineChartPriceText index={at ?? (data[maxIndex].timestamp !== Math.round(xDomain[1] / 1000) * 1000 ? maxIndex : undefined)} style={[textStyle]} {...textProps} format={format} />
       )}
     </Animated.View>
   );
