@@ -135,6 +135,7 @@ export function LineChartPathWrapper({
 
   ////////////////////////////////////////////////
 
+
   return (
     <>
       <LineChartPathContext.Provider
@@ -142,6 +143,8 @@ export function LineChartPathWrapper({
           color,
           isInactive: showInactivePath,
           isTransitionEnabled: pathProps.isTransitionEnabled ?? true,
+          animationDuration,
+          isMounted: isMounted.value
         }}
       >
         <View style={viewSize}>
@@ -163,6 +166,8 @@ export function LineChartPathWrapper({
           color,
           isInactive: false,
           isTransitionEnabled: pathProps.isTransitionEnabled ?? true,
+          animationDuration,
+          isMounted: isMounted.value
         }}
       >
         <View style={StyleSheet.absoluteFill}>

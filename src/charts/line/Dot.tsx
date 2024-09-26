@@ -71,7 +71,7 @@ export function LineChartDot({
 
   ////////////////////////////////////////////////////////////
 
-  const { isInactive: _isInactive } = React.useContext(LineChartPathContext);
+  const { isInactive: _isInactive, animationDuration } = React.useContext(LineChartPathContext);
   const isInactive = showInactiveColor && _isInactive;
   const color = isInactive ? inactiveColor || defaultColor : defaultColor;
   const opacity = isInactive && !inactiveColor ? 0.5 : 1;
@@ -80,8 +80,8 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-    return withTiming(Math.min(getXPositionForCurve(parsedPath, isOriginal ? at : sAt), width));
-  }, [at, sAt, parsedPath.curves, isLiveData, isOriginal, update, width]);
+    return withTiming(Math.min(getXPositionForCurve(parsedPath, isOriginal ? at : sAt), width), {duration: animationDuration});
+  }, [at, sAt, parsedPath.curves, isLiveData, isOriginal, update, width, animationDuration]);
 
   const y = useDerivedValue(
     () => {
@@ -91,10 +91,10 @@ export function LineChartDot({
         let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
         val = maxPoint.y;
       }
-      return withTiming(val || 0)
+      return withTiming(val || 0, {duration: animationDuration})
     }
     ,
-    [parsedPath.curves, x, isLiveData]
+    [parsedPath.curves, x, isLiveData, animationDuration]
   );
 
   ////////////////////////////////////////////////////////////

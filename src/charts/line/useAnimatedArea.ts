@@ -12,7 +12,8 @@ import { findPathIndex, interpolatePath } from './utils';
 import { useLineChart } from './useLineChart';
 
 import { LineChartDimensionsContext } from './Chart';
-import { addPath, findPath, getArea } from './utils';
+import { addPath, getArea } from './utils';
+import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
 
 export default function useAnimatedArea({
   enabled = true,
@@ -34,6 +35,7 @@ export default function useAnimatedArea({
   const { pathWidth, height, gutter, shape, isLiveData, update, areaBuffer } = React.useContext(
     LineChartDimensionsContext
   );
+  const { animationDuration } = React.useContext(LineChartPathContext);
 
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
@@ -179,11 +181,10 @@ export default function useAnimatedArea({
     (result, previous) => {
       if (result && result !== previous) {
         transition.value = 0;
-        transition.value = withTiming(1);
-        // transition.value = withTiming(1,{duration:2500});
+        transition.value = withTiming(1, {duration: animationDuration});
       }
     },
-    []
+    [animationDuration]
   );
 
   const animatedProps = useAnimatedProps(() => {

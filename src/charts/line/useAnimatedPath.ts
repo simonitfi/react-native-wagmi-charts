@@ -10,6 +10,7 @@ import { SharedValue } from "react-native-reanimated/lib/types/lib";
 import { addPath, findPath, findPathIndex, getPath, interpolatePath } from './utils';
 import { LineChartDimensionsContext } from 'react-native-wagmi-charts/src/charts/line/Chart';
 import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
+import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
 
 export default function useAnimatedPath({
   enabled = true,
@@ -31,6 +32,7 @@ export default function useAnimatedPath({
   const { pathWidth, height, gutter, shape, isLiveData, update, pathBuffer } = React.useContext(
     LineChartDimensionsContext
   );
+  const { animationDuration } = React.useContext(LineChartPathContext);
 
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
@@ -175,11 +177,10 @@ export default function useAnimatedPath({
     (result, previous) => {
       if (result && result !== previous) {
         transition.value = 0;
-        transition.value = withTiming(1);
-        //transition.value = withTiming(1,{duration:800});
+        transition.value = withTiming(1, {duration: animationDuration});
       }
     },
-    []
+    [animationDuration]
   );
 
   const animatedProps = useAnimatedProps(() => {

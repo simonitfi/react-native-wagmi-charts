@@ -4,8 +4,7 @@ import * as d3Shape from 'd3-shape';
 
 import { Dimensions, Platform, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
-import { Path, parse } from 'react-native-redash';
-import { addPath, findPathIndex, getPath } from './utils';
+import { Path } from 'react-native-redash';
 
 import { LineChartContext } from './Context';
 import { runOnJS, useDerivedValue } from 'react-native-reanimated';

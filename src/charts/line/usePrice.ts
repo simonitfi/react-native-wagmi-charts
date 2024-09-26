@@ -19,11 +19,11 @@ export function useLineChartPrice({
   const [update, setUpdate] = React.useState(0);
 
   const float = useDerivedValue(() => {
-    if (index !== null && !isActive.value) {
+    if (typeof index === 'number' && !isActive.value) {
       const res = data[Math.min(index ?? currentIndex.value, data.length - 1)]?.value;
       if (typeof res === 'number') return res.toFixed(precision).toString();
     }
-    if (index !== null && isActive.value) {
+    if (typeof index === 'number' && isActive.value) {
       const res = data[Math.min(index, data.length - 1)]?.value;
       if (typeof res === 'number') return res.toFixed(precision).toString();
     }
@@ -63,7 +63,7 @@ export function useLineChartPrice({
       }
     }
     return ''
-  }, [currentIndex, isActive, data, precision]);
+  }, [currentIndex, isActive, data, precision, index]);
   
   const formatted = useDerivedValue(() => {
     let value = float.value || '';

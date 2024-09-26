@@ -10,6 +10,7 @@ import React from 'react';
 import { getXPositionForCurve } from './utils/getXPositionForCurve';
 import { getYForX } from 'react-native-redash';
 import { useLineChart } from './useLineChart';
+import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
 
 const AnimatedLine = Animated.createAnimatedComponent(SVGLine);
 
@@ -58,13 +59,14 @@ export function LineChartHorizontalLine({
     LineChartDimensionsContext
   );
   const { yDomain } = useLineChart();
+  const { animationDuration } = React.useContext(LineChartPathContext);
 
   const y = useDerivedValue(() => {
     if (typeof at === 'number' || at.index != null) {
       const index = typeof at === 'number' ? at : at.index;
       const yForX =
         getYForX(parsedPath!, getXPositionForCurve(parsedPath, index)) || 0;
-      return withTiming(yForX + offsetY);
+      return withTiming(yForX + offsetY, {duration: animationDuration});
     }
     /**
      * <gutter>
@@ -83,8 +85,8 @@ export function LineChartHorizontalLine({
 
     const offsetTopPixels = gutter + percentageOffsetTop * heightBetweenGutters;
 
-    return withTiming(offsetTopPixels + offsetY);
-  }, [at, gutter, height, offsetY, parsedPath, yDomain.max, yDomain.min]);
+    return withTiming(offsetTopPixels + offsetY, {duration: animationDuration});
+  }, [at, gutter, height, offsetY, parsedPath, yDomain.max, yDomain.min, animationDuration]);
 
   const lineAnimatedProps = useAnimatedProps(
     () => ({
