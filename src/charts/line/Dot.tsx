@@ -2,11 +2,13 @@ import * as React from 'react';
 
 import Animated, {
   AnimatedProps,
+  cancelAnimation,
   Easing,
   SharedValue,
   useAnimatedProps,
   useDerivedValue,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withTiming,
@@ -91,10 +93,10 @@ export function LineChartDot({
         let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
         val = maxPoint.y;
       }
-      return withTiming(val || 0, {duration: animationDuration})
+      return (val || 0)
     }
     ,
-    [parsedPath.curves, x, isLiveData, animationDuration]
+    [parsedPath.curves, x, isLiveData, animationDuration, update]
   );
 
   ////////////////////////////////////////////////////////////
@@ -195,14 +197,15 @@ const useAnimatedDot = (x: Readonly<SharedValue<number>>, y: Readonly<SharedValu
     const scale = useSharedValue(0);
   
     React.useEffect(() => {
-      const easing = Easing.out(Easing.sin);
+      const easing = Easing.out(Easing.ease);
       animatedOpacity.value = withRepeat(
         withSequence(
           withTiming(1),
           withTiming(0, {
             duration: pulseDurationMs,
             easing,
-          })
+          }),
+          withDelay(pulseDurationMs*2, withTiming(0))
         ),
         -1,
         false
@@ -213,11 +216,18 @@ const useAnimatedDot = (x: Readonly<SharedValue<number>>, y: Readonly<SharedValu
           withTiming(outerSize, {
             duration: pulseDurationMs,
             easing,
-          })
+          }),
+          withDelay(pulseDurationMs*2, withTiming(outerSize))
         ),
         -1,
         false
       );
+
+      return () => {
+        // Cleanup function
+        cancelAnimation(animatedOpacity)
+        cancelAnimation(scale)
+      }
     }, []);
   
     const animatedDotProps = useAnimatedProps(

@@ -9,6 +9,7 @@ import Animated, {
 import { LineChartCursor, LineChartCursorProps } from './Cursor';
 import { useLineChart } from './useLineChart';
 import { LineChartDimensionsContext } from './Chart';
+import { getYForX } from 'react-native-redash';
 
 type LineChartCursorCrosshairProps = Omit<
   LineChartCursorProps,
@@ -37,7 +38,7 @@ export function LineChartCursorCrosshair({
 }: LineChartCursorCrosshairProps) {
   const { currentX, currentY, isActive, data, xDomain } = useLineChart();
 
-  const { pathWidth: width } = React.useContext(
+  const { pathWidth: width, parsedPath } = React.useContext(
     LineChartDimensionsContext
   );
 
@@ -63,15 +64,24 @@ export function LineChartCursorCrosshair({
       const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
       let opacity: number
 
+      let x = currentX.value
+      let y = currentY.value
+
       if ((boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
         opacity = 1
       } else {
-        opacity = 0
+        opacity = 1
+        x = parsedPath.curves[Math.min(maxIndex, parsedPath.curves.length) - 1].to.x
+        y = getYForX(parsedPath, x) || 0
+        if (y === null) {
+          let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
+          y = maxPoint.y;
+        }
       }
       return {
         transform: [
-          { translateX: currentX.value - outerSize / 2 },
-          { translateY: currentY.value - outerSize / 2 },
+          { translateX: x - outerSize / 2 },
+          { translateY: y - outerSize / 2 },
           {
             scale: enableSpringAnimation
               ? withSpring(isActive.value ? 1 : 0, {
