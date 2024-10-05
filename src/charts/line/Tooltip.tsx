@@ -2,6 +2,8 @@ import * as React from 'react';
 
 import Animated, {
   AnimatedProps,
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -316,7 +318,14 @@ export function LineChartTooltip({
     maxIndex
   ]);
 
-  const index = at ?? (isActive.value && data[maxIndex].timestamp !== Math.round(xDomain[1] / 1000) * 1000 ? maxIndex : undefined)
+  const index = useDerivedValue(() => {
+    if (at !== undefined) return at;
+    if (isActive.value && xDomain) {
+      const relativeX = (currentX.value / width) * (xDomain[1] - xDomain[0]);
+      return maxIndex && relativeX > data[maxIndex].timestamp ? maxIndex : undefined
+    }
+    return maxIndex;
+  }, [at, isActive.value, xDomain, data, currentX.value, width, maxIndex]);
 
   return (
     <Animated.View
