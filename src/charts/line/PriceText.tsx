@@ -4,7 +4,7 @@ import type { TextProps as RNTextProps } from 'react-native';
 import { useLineChartPrice } from './usePrice';
 import type { TFormatterFn } from '../candle/types';
 import { AnimatedText } from '../../components/AnimatedText';
-import { AnimatedProps } from 'react-native-reanimated';
+import { AnimatedProps, SharedValue } from 'react-native-reanimated';
 
 export type LineChartPriceTextProps = {
   format?: TFormatterFn<string>;
@@ -15,7 +15,7 @@ export type LineChartPriceTextProps = {
    * By default, it will use the current active index from the chart.
    * If this is set it will use the index provided.
    */
-  index?: number;
+  index?: SharedValue<number | undefined>;
 };
 
 LineChartPriceText.displayName = 'LineChartPriceText';
