@@ -334,7 +334,8 @@ export function LineChartTooltip({
       style={[
         {
           position: 'absolute',
-          padding: 4,
+          padding: 0,
+          margin: 0,
           alignSelf: 'flex-start',
         },
         animatedCursorStyle,
@@ -342,7 +343,7 @@ export function LineChartTooltip({
       ]}
     >
       {children || null}
-      <LineChartPriceText index={index} style={[textStyle]} {...textProps} format={format} />
+      <LineChartPriceText index={index} style={[{ padding: 0, margin: 0 }, textStyle]} {...textProps} format={format} />
     </Animated.View>
   );
 }
