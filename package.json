@@ -1,5 +1,5 @@
 {
-  "name": "react-native-wagmi-charts",
+  "name": "@simonitfi/react-native-wagmi-charts",
   "version": "4.2.5",
   "description": "A sweet candlestick chart for React Native",
   "main": "lib/commonjs/index.js",
