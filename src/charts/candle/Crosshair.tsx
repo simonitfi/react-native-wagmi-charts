@@ -109,6 +109,12 @@ export function CandlestickChartCrosshair({
     <GestureDetector gesture={longPressGesture}>
       <Animated.View style={StyleSheet.absoluteFill}>
         <Animated.View
+          style={[StyleSheet.absoluteFill, vertical]}
+          {...verticalCrosshairProps}
+        >
+          <CandlestickChartLine color={color} x={0} y={height} {...lineProps} />
+        </Animated.View>
+        <Animated.View
           style={[StyleSheet.absoluteFill, horizontal]}
           {...horizontalCrosshairProps}
         >
@@ -118,12 +124,6 @@ export function CandlestickChartCrosshair({
           >
             {children}
           </CandlestickChartCrosshairTooltipContext.Provider>
-        </Animated.View>
-        <Animated.View
-          style={[StyleSheet.absoluteFill, vertical]}
-          {...verticalCrosshairProps}
-        >
-          <CandlestickChartLine color={color} x={0} y={height} {...lineProps} />
         </Animated.View>
       </Animated.View>
     </GestureDetector>
