@@ -11,6 +11,9 @@ type LineChartCursorLineProps = {
   children?: React.ReactNode;
   color?: string;
   lineProps?: Partial<LineProps>;
+  format?: TFormatterFn<string | number>;
+  textStyle?: TextStyle;
+  persistOnEnd?: boolean;
 } & Omit<LineChartCursorProps, 'type' | 'children'>;
 
 LineChartCursorLine.displayName = 'LineChartCursorLine';

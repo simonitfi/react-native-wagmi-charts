@@ -25,6 +25,8 @@ export type LineChartCursorProps = {
   minDurationMs?: number;
   onActivated?: () => void;
   onEnded?: () => void;
+  orientation?: 'horizontal' | 'vertical';
+  persistOnEnd?: boolean;
 };
 
 export const CursorContext = React.createContext({ type: '' });
@@ -37,6 +39,7 @@ export function LineChartCursor({
   type,
   at,
   shouldCancelWhenOutside = false,
+  persistOnEnd = false,
   minDurationMs = 0,
   onActivated,
   onEnded,
@@ -142,8 +145,11 @@ export function LineChartCursor({
     })
     .onEnd(() => {
       'worklet';
-      isActive.value = false;
-      currentIndex.value = -1;
+
+      if (!persistOnEnd) {
+        isActive.value = false;
+        currentIndex.value = -1;
+      }
 
       if (onEnded) {
         runOnJS(onEnded)();
