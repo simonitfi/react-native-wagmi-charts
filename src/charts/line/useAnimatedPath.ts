@@ -137,7 +137,7 @@ export default function useAnimatedPath({
 
   const setPath = () => {
     if (data && data.length > 0) {
-      path.value = getPath({
+      const p = getPath({
         data,
         from,
         to,
@@ -149,6 +149,7 @@ export default function useAnimatedPath({
         xDomain,
         isOriginalData: true,
       });
+      path.value = p;
     } else {
       path.value = '';
     }
