@@ -115,6 +115,20 @@ export default function useAnimatedPath({
 
   const path = useSharedValue('');
 
+  // Mirror smoothedPath as a SharedValue so useAnimatedReaction below only
+  // re-subscribes when the actual path string changes, not on every React
+  // re-render. A plain JS string in the deps array causes the worklet to be
+  // recreated each render, firing the reaction continuously at ~60fps.
+  const smoothedPathSV = useSharedValue(smoothedPath);
+  React.useEffect(() => {
+    smoothedPathSV.value = smoothedPath;
+    // When not active / initial state, update path immediately on JS thread
+    // (mirrors what the original getter did: path.value = smoothedPath)
+    if (!isLiveData) {
+      path.value = smoothedPath;
+    }
+  }, [smoothedPath, isLiveData]);
+
   const allowMorph = useSharedValue(true);
 
   const enableMorph = () => {
@@ -147,13 +161,14 @@ export default function useAnimatedPath({
   }, [height, gutter, shape, update, isLiveData]);
 
   useAnimatedReaction(
-    () => {
-      if (update === 0 || (!isActive.value && isLiveData)) {
-        path.value = smoothedPath
-      }
-      return isActive.value
-    },
+    () => isActive.value,
     (result, previous) => {
+      // For live data: when active, switch to real path; when inactive, use smoothed
+      if (isLiveData) {
+        if (!result) {
+          path.value = smoothedPathSV.value;
+        }
+      }
       if (!!previous !== result) {
         allowMorph.value = false
         !result && runOnJS(enableMorph)()
@@ -162,20 +177,15 @@ export default function useAnimatedPath({
         runOnJS(setPath)()
       }
     },
-    [isActive, smoothedPath, update]
+    [isActive, smoothedPathSV]
   );
 
   useAnimatedReaction(
-    () => {
-      if (currentPath.value !== path.value) {
-        previousPath.value = currentPath.value
-        currentPath.value = path.value
-        return currentPath.value;
-      }
-      return false
-    },
-    (result, previous) => {
-      if (result && result !== previous) {
+    () => path.value,
+    (current, previous) => {
+      if (current !== previous && current) {
+        previousPath.value = currentPath.value;
+        currentPath.value = current;
         transition.value = 0;
         transition.value = withTiming(1, {duration: animationDuration});
       }
@@ -186,9 +196,9 @@ export default function useAnimatedPath({
   const animatedProps = useAnimatedProps(() => {
     let d = currentPath.value || '';
     if (previousPath.value && enabled && allowMorph.value && !isActive.value) {
-      function excludeSegment(a, b) {
+      function excludeSegment(a: {x: number}, b: {x: number}) {
+        'worklet';
         if (a.x === b.x) {
-          console.log('excludeSegment', a.x === b.x)
           return true
         }
         return false

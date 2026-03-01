@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Platform, View, ViewProps, StyleSheet } from 'react-native';
 import Animated, {
   AnimatedProps,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -92,6 +93,29 @@ export function LineChartCursorCrosshair({
     return () => clearTimeout(timer);
   }, []);
 
+  // Keep enableSpringAnimation in a SharedValue so the worklet below can read
+  // it without capturing the JS value at worklet-creation time.
+  const enableSpringAnimationSV = useSharedValue(enableSpringAnimation);
+  React.useEffect(() => {
+    enableSpringAnimationSV.value = enableSpringAnimation;
+  }, [enableSpringAnimation]);
+
+  // Drive scale from a plain SharedValue. withSpring() is set here, firing only
+  // when isActive actually changes — not on every currentX/currentY update.
+  // Calling withSpring() inside useAnimatedStyle causes it to re-run every frame
+  // whenever any dependency (currentX, currentY) changes, creating a new spring
+  // animation object each frame and hammering the UI thread at 60fps when idle.
+  const animatedScale = useSharedValue(0);
+  useAnimatedReaction(
+    () => isActive.value,
+    (active) => {
+      animatedScale.value = enableSpringAnimationSV.value
+        ? withSpring(active ? 1 : 0, { damping: 10, stiffness: 100, mass: 0.3 })
+        : (active ? 1 : 0);
+    },
+    [isActive, enableSpringAnimationSV]
+  );
+
   const animatedCursorStyle = useAnimatedStyle(
     () => {
       const withinRange =
@@ -103,21 +127,12 @@ export function LineChartCursorCrosshair({
         transform: [
           { translateX: x - outerSize / 2 },
           { translateY: y - outerSize / 2 },
-          {
-            scale: enableSpringAnimation
-              ? withSpring(isActive.value ? 1 : 0, {
-                  damping: 10,
-                  stiffness: 100,
-                  mass: 0.3,
-                })
-              : 0,
-          },
+          { scale: animatedScale.value },
         ],
         opacity: 1,
       };
     },
-    [currentX, currentY, enableSpringAnimation, isActive, outerSize,
-     snapX, snapY, minXBound, maxXBound]
+    [currentX, currentY, animatedScale, outerSize, snapX, snapY, minXBound, maxXBound]
   );
 
   return (
