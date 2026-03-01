@@ -63,9 +63,9 @@ export function LineChartTooltip({
 
   const x = useSharedValue(0);
   const lastIsActive = useSharedValue(false);
-  const elementWidth = useSharedValue(xGutter);
+  const elementWidth = useSharedValue(60);
   const elementHeight = useSharedValue(yGutter);
-  const elementWidthOriginal = useSharedValue(xGutter);
+  const elementWidthOriginal = useSharedValue(60);
   const elementHeightOriginal = useSharedValue(yGutter);
 
   const { minIndex, maxIndex } = React.useMemo(() => {
@@ -131,10 +131,10 @@ export function LineChartTooltip({
       };
     }
 
-    if (elementWidth.value === xGutter) {
+    if (elementWidth.value === 60) {
       elementWidth.value = elementWidthOriginal.value
     }
-    if (elementWidthOriginal.value === xGutter) {
+    if (elementWidthOriginal.value === 60) {
       elementWidthOriginal.value = elementWidth.value
     }
     if (elementHeight.value === yGutter) {
