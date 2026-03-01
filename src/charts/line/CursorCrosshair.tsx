@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Platform, View, ViewProps } from 'react-native';
+import { Platform, View, ViewProps, StyleSheet } from 'react-native';
 import Animated, {
   AnimatedProps,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
 
@@ -10,6 +11,8 @@ import { LineChartCursor, LineChartCursorProps } from './Cursor';
 import { useLineChart } from './useLineChart';
 import { LineChartDimensionsContext } from './Chart';
 import { getYForX } from 'react-native-redash';
+
+const ANDROID_SPRING_ANIMATION_DELAY_MS = 100;
 
 type LineChartCursorCrosshairProps = Omit<
   LineChartCursorProps,
@@ -42,42 +45,60 @@ export function LineChartCursorCrosshair({
     LineChartDimensionsContext
   );
 
+  // Precomputed boundary scalars — updated on JS thread only when data changes,
+  // so the worklet never iterates arrays on every frame.
+  const snapX = useSharedValue(0);
+  const snapY = useSharedValue(0);
+  const minXBound = useSharedValue(0);
+  const maxXBound = useSharedValue(width);
+
+  React.useEffect(() => {
+    if (!parsedPath || !data || data.length === 0) return;
+
+    const minIndex = data.findIndex((el: { value: null }) => el.value !== null);
+    const maxIndex =
+      minIndex !== 0 || data.findIndex((el: { value: null }) => el.value === null) === -1
+        ? data.length - 1
+        : data.findIndex((el: { value: null }) => el.value === null) - 1;
+
+    const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1;
+    const minVal = xDomain ? data[minIndex].timestamp : minIndex;
+    const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex;
+
+    minXBound.value = (1 / total) * minVal * width;
+    maxXBound.value = (1 / total) * maxVal * width;
+
+    const sx = parsedPath.curves[Math.min(maxIndex, parsedPath.curves.length) - 1]?.to.x ?? 0;
+    let sy = getYForX(parsedPath, sx) || 0;
+    if (!sy) {
+      sy = parsedPath.curves.reduce(
+        (max: { x: number; y: number }, curve: { to: { x: number; y: number } }) =>
+          curve.to.x > max.x ? curve.to : max,
+        parsedPath.curves[0].to
+      ).y;
+    }
+    snapX.value = sx;
+    snapY.value = sy;
+  }, [data, xDomain, parsedPath, width]);
+
   // It seems that enabling spring animation on initial render on Android causes a crash.
   const [enableSpringAnimation, setEnableSpringAnimation] = React.useState(
     Platform.OS === 'ios'
   );
   React.useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setEnableSpringAnimation(true);
-    }, 100);
+    }, ANDROID_SPRING_ANIMATION_DELAY_MS);
+    return () => clearTimeout(timer);
   }, []);
 
   const animatedCursorStyle = useAnimatedStyle(
     () => {
-      // Hide cursor for null values
-      const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
-      const minIndex = data.findIndex((element: { value: null; }) => element.value !== null);
-      const maxIndex = minIndex !== 0 || data.findIndex((element: { value: null; }) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element: { value: null; }) => element.value === null) - 1;
+      const withinRange =
+        currentX.value > minXBound.value && currentX.value < maxXBound.value;
+      const x = withinRange ? currentX.value : snapX.value;
+      const y = withinRange ? currentY.value : snapY.value;
 
-      const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
-      const minVal = xDomain ? data[minIndex].timestamp : minIndex
-      const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
-      let opacity: number
-
-      let x = currentX.value
-      let y = currentY.value
-
-      if ((boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
-        opacity = 1
-      } else {
-        opacity = 1
-        x = parsedPath.curves[Math.min(maxIndex, parsedPath.curves.length) - 1].to.x
-        y = getYForX(parsedPath, x) || 0
-        if (y === null) {
-          let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
-          y = maxPoint.y;
-        }
-      }
       return {
         transform: [
           { translateX: x - outerSize / 2 },
@@ -85,17 +106,18 @@ export function LineChartCursorCrosshair({
           {
             scale: enableSpringAnimation
               ? withSpring(isActive.value ? 1 : 0, {
-                damping: 10,
-                stiffness: 100,
-                mass: 0.3,
-              })
+                  damping: 10,
+                  stiffness: 100,
+                  mass: 0.3,
+                })
               : 0,
           },
         ],
-        opacity
-      }
+        opacity: 1,
+      };
     },
-    [currentX, currentY, enableSpringAnimation, isActive, outerSize, data]
+    [currentX, currentY, enableSpringAnimation, isActive, outerSize,
+     snapX, snapY, minXBound, maxXBound]
   );
 
   return (
@@ -103,11 +125,10 @@ export function LineChartCursorCrosshair({
       <Animated.View
         {...crosshairWrapperProps}
         style={[
+          styles.crosshairWrapper,
           {
             width: outerSize,
             height: outerSize,
-            alignItems: 'center',
-            justifyContent: 'center',
           },
           animatedCursorStyle,
           crosshairWrapperProps.style,
@@ -116,13 +137,12 @@ export function LineChartCursorCrosshair({
         <View
           {...crosshairOuterProps}
           style={[
+            styles.crosshairOuter,
             {
               backgroundColor: color,
               width: outerSize,
               height: outerSize,
               borderRadius: outerSize,
-              opacity: 0.1,
-              position: 'absolute',
             },
             crosshairOuterProps.style,
           ]}
@@ -144,3 +164,14 @@ export function LineChartCursorCrosshair({
     </LineChartCursor>
   );
 }
+
+const styles = StyleSheet.create({
+  crosshairWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crosshairOuter: {
+    opacity: 0.1,
+    position: 'absolute',
+  },
+});
