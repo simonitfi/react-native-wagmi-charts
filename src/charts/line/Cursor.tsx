@@ -22,6 +22,7 @@ export type LineChartCursorProps = {
   snapToPoint?: boolean;
   at?: number;
   shouldCancelWhenOutside?: boolean;
+  minDurationMs?: number;
   onActivated?: () => void;
   onEnded?: () => void;
 };
@@ -36,6 +37,7 @@ export function LineChartCursor({
   type,
   at,
   shouldCancelWhenOutside = false,
+  minDurationMs = 0,
   onActivated,
   onEnded,
 }: LineChartCursorProps) {
@@ -114,7 +116,7 @@ export function LineChartCursor({
   };
 
   const longPressGesture = Gesture.LongPress()
-    .minDuration(0)
+    .minDuration(minDurationMs ?? 0)
     .maxDistance(999999)
     .shouldCancelWhenOutside(shouldCancelWhenOutside)
     .onStart(
