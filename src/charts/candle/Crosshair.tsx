@@ -20,7 +20,7 @@ import { CandlestickChartLine, CandlestickChartLineProps } from './Line';
 import { useCandlestickChart } from './useCandlestickChart';
 import { CandlestickChartCrosshairTooltipContext } from './CrosshairTooltip';
 
-type CandlestickChartCrosshairProps = LongPressGestureHandlerProps & {
+type CandlestickChartCrosshairProps = {
   color?: string;
   children?: React.ReactNode;
   onCurrentXChange?: (value: number) => unknown;
