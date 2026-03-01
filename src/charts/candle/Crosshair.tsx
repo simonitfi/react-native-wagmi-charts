@@ -27,6 +27,7 @@ type CandlestickChartCrosshairProps = {
   horizontalCrosshairProps?: AnimatedProps<ViewProps>;
   verticalCrosshairProps?: AnimatedProps<ViewProps>;
   lineProps?: Partial<CandlestickChartLineProps>;
+  minDurationMs?: number;
 };
 
 export function CandlestickChartCrosshair({
@@ -36,6 +37,7 @@ export function CandlestickChartCrosshair({
   horizontalCrosshairProps = {},
   verticalCrosshairProps = {},
   lineProps = {},
+  minDurationMs = 0,
 }: CandlestickChartCrosshairProps) {
   const { width, height } = React.useContext(CandlestickChartDimensionsContext);
   const { currentX, currentY, step } = useCandlestickChart();
@@ -57,7 +59,7 @@ export function CandlestickChartCrosshair({
   };
 
   const longPressGesture = Gesture.LongPress()
-    .minDuration(0)
+    .minDuration(minDurationMs)
     .maxDistance(999999)
     .onStart(
       (event: GestureStateChangeEvent<LongPressGestureHandlerEventPayload>) => {
