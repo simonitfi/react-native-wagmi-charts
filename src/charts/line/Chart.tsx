@@ -7,7 +7,7 @@ import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path } from 'react-native-redash';
 
 import { LineChartContext } from './Context';
-import { runOnJS, useDerivedValue } from 'react-native-reanimated';
+import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 import useParsedPath from 'react-native-wagmi-charts/src/charts/line/useParsedPath';
 
@@ -78,12 +78,27 @@ export function LineChart({
     Platform.OS === 'web' && setUpdate(Date.now())
   }, [height]);
 
-  useDerivedValue(() => {
-    let dum = 0
-    if (isActive.value) dum = 1
-    if (isLiveData) runOnJS(setUpdate)(Date.now())
-    else runOnJS(setUpdateContext)(Date.now())
-  }, []); // No need to pass dependencies
+  // Only call setUpdateContext once (Tooltip checks updateContext === 0 as
+  // "cursor never used" sentinel). For live data, setUpdate is handled inside
+  // useAnimatedPath's own isActive reaction — no need to fire every frame here.
+  const updateContextSetRef = useSharedValue(false);
+  useAnimatedReaction(
+    () => isActive.value,
+    (active, previous) => {
+      if (active === previous) return;
+      if (isLiveData) {
+        // Signal live-data path refresh only when gesture ends
+        if (!active) runOnJS(setUpdate)(Date.now());
+      } else {
+        // Flip updateContext from 0 once so Tooltip knows cursor has been used
+        if (!updateContextSetRef.value) {
+          updateContextSetRef.value = true;
+          runOnJS(setUpdateContext)(Date.now());
+        }
+      }
+    },
+    [isLiveData]
+  );
 
   React.useEffect(() => {
     round.current++
