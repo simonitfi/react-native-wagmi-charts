@@ -126,6 +126,9 @@ export default function useAnimatedPath({
     // (mirrors what the original getter did: path.value = smoothedPath)
     if (!isLiveData) {
       path.value = smoothedPath;
+    } else if (!isActive.value) {
+      // For live data, also update path when new data arrives and chart is not being touched
+      path.value = smoothedPath;
     }
   }, [smoothedPath, isLiveData]);
 
@@ -155,9 +158,18 @@ export default function useAnimatedPath({
     }
   }
 
+  const setPathRef = React.useRef(setPath);
+  React.useEffect(() => {
+    setPathRef.current = setPath;
+  });
+
+  const setPathLatest = React.useCallback(() => {
+    setPathRef.current();
+  }, []);
+
   React.useEffect(() => {
     if (update !== 0 && !isLiveData) {
-      setPath()
+      setPathLatest()
     }
   }, [height, gutter, shape, update, isLiveData]);
 
@@ -175,7 +187,7 @@ export default function useAnimatedPath({
         !result && runOnJS(enableMorph)()
       }
       if (result && isLiveData) {
-        runOnJS(setPath)()
+        runOnJS(setPathLatest)()
       }
     },
     [isActive, smoothedPathSV]
