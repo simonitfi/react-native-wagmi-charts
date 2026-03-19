@@ -8,7 +8,6 @@ import Animated, {
   useAnimatedReaction,
 } from 'react-native-reanimated';
 import type { SharedValue, AnimatedProps } from 'react-native-reanimated';
-Animated.addWhitelistedNativeProps({ text: true });
 
 interface AnimatedTextProps {
   text: SharedValue<string>;

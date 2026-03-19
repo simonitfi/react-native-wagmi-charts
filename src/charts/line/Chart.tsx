@@ -7,7 +7,8 @@ import { LineChartIdProvider, useLineChartData } from './Data';
 import { Path } from 'react-native-redash';
 
 import { LineChartContext } from './Context';
-import { runOnJS, useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 import useParsedPath from 'react-native-wagmi-charts/src/charts/line/useParsedPath';
 
@@ -71,12 +72,16 @@ export function LineChart({
   const pathBuffer = React.useRef<LineChartPathBuffer>([]);
   const areaBuffer = React.useRef<LineChartAreaBuffer>([]);
 
-  const round = React.useRef(0);
-
   React.useEffect(() => {
     // On WEb force update
     Platform.OS === 'web' && setUpdate(Date.now())
   }, [height]);
+
+  React.useEffect(() => {
+    setTimeout(() => {
+      setUpdate(Date.now());
+    }, 100);
+  }, []);
 
   // Only call setUpdateContext once (Tooltip checks updateContext === 0 as
   // "cursor never used" sentinel). For live data, setUpdate is handled inside
@@ -88,26 +93,17 @@ export function LineChart({
       if (active === previous) return;
       if (isLiveData) {
         // Signal live-data path refresh only when gesture ends
-        if (!active) runOnJS(setUpdate)(Date.now());
+        if (!active) scheduleOnRN(setUpdate, Date.now());
       } else {
         // Flip updateContext from 0 once so Tooltip knows cursor has been used
         if (!updateContextSetRef.value) {
           updateContextSetRef.value = true;
-          runOnJS(setUpdateContext)(Date.now());
+          scheduleOnRN(setUpdateContext, Date.now());
         }
       }
     },
     [isLiveData]
   );
-
-  React.useEffect(() => {
-    round.current++
-    if (round.current === 2) {
-      setTimeout(() => {
-        setUpdate(Date.now())
-      }, 100)
-    }
-  });
 
   const pathWidth = React.useMemo(() => {
     let allowedWidth = width;

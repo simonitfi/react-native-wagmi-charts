@@ -1,6 +1,6 @@
 import * as React from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 import {
-  runOnJS,
   useAnimatedProps,
   useAnimatedReaction,
   useSharedValue,
@@ -11,6 +11,11 @@ import { addPath, findPath, findPathIndex, getPath, interpolatePath } from './ut
 import { LineChartDimensionsContext } from 'react-native-wagmi-charts/src/charts/line/Chart';
 import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
 import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
+
+function excludeSegment(a: {x: number}, b: {x: number}) {
+  'worklet';
+  return a.x === b.x;
+}
 
 export default function useAnimatedPath({
   enabled = true,
@@ -184,10 +189,10 @@ export default function useAnimatedPath({
       }
       if (!!previous !== result) {
         allowMorph.value = false
-        !result && runOnJS(enableMorph)()
+        !result && scheduleOnRN(enableMorph)
       }
       if (result && isLiveData) {
-        runOnJS(setPathLatest)()
+        scheduleOnRN(setPathLatest)
       }
     },
     [isActive, smoothedPathSV]
@@ -209,13 +214,6 @@ export default function useAnimatedPath({
   const animatedProps = useAnimatedProps(() => {
     let d = currentPath.value || '';
     if (previousPath.value && enabled && allowMorph.value && !isActive.value) {
-      function excludeSegment(a: {x: number}, b: {x: number}) {
-        'worklet';
-        if (a.x === b.x) {
-          return true
-        }
-        return false
-      }
       const pathInterpolator = interpolatePath(previousPath.value, currentPath.value, excludeSegment);
       d = pathInterpolator(transition.value);
     }

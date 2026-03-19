@@ -1,6 +1,6 @@
 import * as React from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 import {
-  runOnJS,
   useAnimatedReaction,
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
@@ -154,7 +154,7 @@ export default function useParsedPath({
     },
     (result, previous) => {
       if (result !== previous) {
-        runOnJS(setIsOriginal)(result)
+        scheduleOnRN(setIsOriginal, result)
       }
     },
     [isActive]

@@ -1,6 +1,6 @@
 import * as React from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 import {
-  runOnJS,
   useAnimatedReaction,
   useSharedValue,
 } from 'react-native-reanimated';
@@ -92,7 +92,7 @@ export function LineChartProvider({
     (data: any, prevData: any) => {
       const prevData_ = !!prevData
       if (data !== prevData_ && onActiveChange) {
-        runOnJS(onActiveChange)(isActive.value);
+        scheduleOnRN(onActiveChange, isActive.value);
       }
     },
     [isActive, onActiveChange]
@@ -102,7 +102,7 @@ export function LineChartProvider({
     () => currentIndex.value,
     (x, prevX) => {
       if (x !== -1 && x !== prevX && onCurrentIndexChange) {
-        runOnJS(onCurrentIndexChange)(x);
+        scheduleOnRN(onCurrentIndexChange, x);
       }
     },
     [currentIndex, onCurrentIndexChange]

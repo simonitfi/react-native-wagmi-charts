@@ -1,6 +1,7 @@
 import * as React from 'react';
 
-import Animated, { runOnJS } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import Animated from 'react-native-reanimated';
 import {
   Gesture,
   GestureDetector,
@@ -91,7 +92,7 @@ export function LineChartCursor({
   useEffect(() => {
     if (at !== undefined) {
       const xPosition = scaleX(at);
-      runOnJS(linearScalePositionAndIndex)({ xPosition });
+      scheduleOnRN(linearScalePositionAndIndex, { xPosition });
       isActive.value = true;
     }
   }, [at, scaleX]);
@@ -110,7 +111,7 @@ export function LineChartCursor({
 
       if (snapToPoint) {
         // We have to run this on the JS thread unfortunately as the scaleLinear functions won't work on UI thread
-        runOnJS(linearScalePositionAndIndex)({ xPosition });
+        scheduleOnRN(linearScalePositionAndIndex, { xPosition });
       } else if (!snapToPoint) {
         currentX.value = xPosition;
         currentIndex.value = boundedIndex;
@@ -131,7 +132,7 @@ export function LineChartCursor({
           updatePosition(xPosition);
 
           if (onActivated) {
-            runOnJS(onActivated)();
+            scheduleOnRN(onActivated);
           }
         }
       }
@@ -152,7 +153,7 @@ export function LineChartCursor({
       }
 
       if (onEnded) {
-        runOnJS(onEnded)();
+        scheduleOnRN(onEnded);
       }
     });
 

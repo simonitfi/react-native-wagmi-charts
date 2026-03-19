@@ -30,17 +30,15 @@ export function getPath({
 }): string {
   // Set from and to depending on null values on data
   const fromNull = data.findIndex((element) => element.value !== null);
-  const toNull = fromNull !== 0 || data.findIndex((element) => element.value === null) === -1 ? data.length - 1 : data.findIndex((element) => element.value === null) - 1;
+  const firstNullAfter = fromNull !== 0 ? -1 : data.findIndex((element) => element.value === null);
+  const toNull = firstNullAfter === -1 ? data.length - 1 : firstNullAfter - 1;
 
   from = from !== undefined && from > fromNull ? from : fromNull
   to = to !== undefined && to < toNull ? to : toNull
 
-  const timestamps = new Array(data.length);
-  for (let i = 0; i < data.length; ++i) {
-    timestamps[i] = xDomain ? data[i].timestamp : i;
-  }
+  const timestamps = xDomain ? data.map((d) => d.timestamp) : null;
   const scaleX = scaleLinear()
-    .domain(xDomain ?? [Math.min(...timestamps), Math.max(...timestamps)])
+    .domain(xDomain ?? [0, data.length - 1])
     .range([0, width]);
   const scaleY = scaleLinear()
     .domain([yDomain.min, yDomain.max])
@@ -49,14 +47,8 @@ export function getPath({
   try {
     const path = shape
       .line()
-      .defined((d: { timestamp: number }) =>
-        from || to
-          ? data
-            .slice(from, to ? to + 1 : undefined)
-            .find((item) => item.timestamp === d.timestamp)
-          : true
-      )
-      .x((_: unknown, i: number) => scaleX(xDomain ? timestamps[i] : i))
+      .defined((_: unknown, i: number) => (from || to) ? (i >= (from as number) && i <= (to as number)) : true)
+      .x((_: unknown, i: number) => scaleX(xDomain ? (timestamps as number[])[i] : i))
       .y((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
       .curve(_shape)(data);
     return path;

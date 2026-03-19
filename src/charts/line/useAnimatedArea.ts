@@ -1,6 +1,6 @@
 import * as React from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 import {
-  runOnJS,
   useAnimatedProps,
   useAnimatedReaction,
   useSharedValue,
@@ -14,6 +14,11 @@ import { useLineChart } from './useLineChart';
 import { LineChartDimensionsContext } from './Chart';
 import { addPath, getArea } from './utils';
 import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
+
+function excludeSegment(a: {x: number}, b: {x: number}) {
+  'worklet';
+  return a.x === b.x;
+}
 
 export default function useAnimatedArea({
   enabled = true,
@@ -160,10 +165,10 @@ export default function useAnimatedArea({
     (result, previous) => {
       if (!!previous !== result) {
         allowMorph.value = false
-        !result && runOnJS(enableMorph)()
+        !result && scheduleOnRN(enableMorph)
       }
       if (result && isLiveData) {
-        runOnJS(setArea)()
+        scheduleOnRN(setArea)
       }
     },
     [isActive, smoothedArea]
@@ -191,12 +196,6 @@ export default function useAnimatedArea({
     let d = currentArea.value || '';
 
     if (previousArea.value && enabled && allowMorph.value && !isActive.value) {
-      function excludeSegment(a, b) {
-        if (a.x === b.x) {
-          return true
-        }
-        return false
-      }
       const pathInterpolator = interpolatePath(previousArea.value, currentArea.value, excludeSegment);
       d = pathInterpolator(transition.value);
     }

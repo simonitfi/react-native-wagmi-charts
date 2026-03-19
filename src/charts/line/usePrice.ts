@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { runOnJS, SharedValue, useDerivedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { SharedValue, useDerivedValue } from 'react-native-reanimated';
 
 import { formatPrice, akimaCubicInterpolation, precalculate } from '../../utils';
 import type { TFormatterFn } from '../candle/types';
@@ -69,7 +70,7 @@ export function useLineChartPrice({
     let value = float.value || '';
     const formattedPrice = value ? formatPrice({ value }) : '';
     // force render on change as without does show second last value
-    if (formattedPrice && index?.value !== null && !isActive.value) runOnJS(setUpdate)(Date.now())
+    if (formattedPrice && index?.value !== null && !isActive.value) scheduleOnRN(setUpdate, Date.now())
     return format
       ? format({ value, formatted: formattedPrice })
       : formattedPrice;

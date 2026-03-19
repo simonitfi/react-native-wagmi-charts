@@ -6,11 +6,11 @@ import {
   GestureStateChangeEvent,
   LongPressGestureHandlerEventPayload,
 } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   useAnimatedReaction,
-  runOnJS,
   AnimatedProps,
 } from 'react-native-reanimated';
 import { clamp } from 'react-native-redash';
@@ -99,7 +99,7 @@ export function CandlestickChartCrosshair({
     () => currentX.value,
     (data, prevData) => {
       if (data !== -1 && data !== prevData && onCurrentXChange) {
-        runOnJS(onCurrentXChange)(data);
+        scheduleOnRN(onCurrentXChange, data);
       }
     },
     [currentX]

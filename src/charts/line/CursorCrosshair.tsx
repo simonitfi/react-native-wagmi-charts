@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Platform, View, ViewProps, StyleSheet } from 'react-native';
 import Animated, {
   AnimatedProps,
-  runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
