@@ -45,7 +45,7 @@ export function LineChartCursor({
   onActivated,
   onEnded,
 }: LineChartCursorProps) {
-  const { pathWidth: width, parsedPath } = React.useContext(
+  const { pathWidth: width, parsedPathSV } = React.useContext(
     LineChartDimensionsContext
   );
   const { currentX, currentIndex, isActive, data, xDomain } = useLineChart();
@@ -65,7 +65,7 @@ export function LineChartCursor({
   }: {
     xPosition: number;
   }) => {
-    if (!parsedPath) {
+    if (!parsedPathSV.value?.curves?.length) {
       return;
     }
 
@@ -73,16 +73,16 @@ export function LineChartCursor({
     const xRelative = scaleX.invert(xPosition);
 
     const closestIndex = bisectCenter(xValues, xRelative);
-    const pathDataDelta = Math.abs(parsedPath.curves.length - xValues.length); // sometimes there is a difference between data length and number of path curves.
+    const pathDataDelta = Math.abs(parsedPathSV.value.curves.length - xValues.length); // sometimes there is a difference between data length and number of path curves.
     const closestPathCurve = Math.max(
-      Math.min(closestIndex, parsedPath.curves.length + 1) - pathDataDelta,
+      Math.min(closestIndex, parsedPathSV.value.curves.length + 1) - pathDataDelta,
       0
     );
 
     const newXPosition = (
       closestIndex > 0
-        ? parsedPath.curves[closestPathCurve]!.to
-        : parsedPath.move
+        ? parsedPathSV.value.curves[closestPathCurve]!.to
+        : parsedPathSV.value.move
     ).x;
     // Update values
     currentIndex.value = closestIndex;
@@ -99,7 +99,7 @@ export function LineChartCursor({
 
   const updatePosition = (xPosition: number) => {
     'worklet';
-    if (parsedPath) {
+    if (parsedPathSV.value?.curves?.length) {
       // on Web, we could drag the cursor to be negative, breaking it
       // so we clamp the index at 0 to fix it
       // https://github.com/coinjar/react-native-wagmi-charts/issues/24
@@ -126,7 +126,7 @@ export function LineChartCursor({
     .onStart(
       (event: GestureStateChangeEvent<LongPressGestureHandlerEventPayload>) => {
         'worklet';
-        if (parsedPath) {
+        if (parsedPathSV.value?.curves?.length) {
           const xPosition = Math.max(0, event.x <= width ? event.x : width);
           isActive.value = true;
           updatePosition(xPosition);
@@ -139,7 +139,7 @@ export function LineChartCursor({
     )
     .onTouchesMove((event) => {
       'worklet';
-      if (parsedPath && isActive.value && event.allTouches.length > 0) {
+      if (parsedPathSV.value?.curves?.length && isActive.value && event.allTouches.length > 0) {
         const xPosition = Math.max(0, event.allTouches[0]!.x <= width ? event.allTouches[0]!.x : width);
         updatePosition(xPosition);
       }

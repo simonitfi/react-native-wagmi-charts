@@ -50,21 +50,25 @@ export function LineChartProvider({
   const currentIndex = useSharedValue(-1);
   const isActive = useSharedValue(false);
 
+  const allRows = React.useMemo(() => lineChartDataPropToArray(data), [data]);
+
   const domain = React.useMemo(
-    () => getDomain(
-      Array.isArray(data) ? data : Object.values(data)[0] as TLineChartData
-    ),
-    [data]
+    () => getDomain(allRows),
+    [allRows]
   );
 
   const contextValue = React.useMemo<TLineChartContext>(() => {
-    const values = lineChartDataPropToArray(data).map(({ value }) => value);
+    const values = allRows.map(({ value }) => value);
     const yDomain = {
       min: yRange?.min ?? Math.min(...values),
       max: yRange?.max ?? Math.max(...values),
     }
-    const domainRows =
-      Array.isArray(data) ? data : Object.values(data)[0] as TLineChartData;
+    const longestDataset = Array.isArray(data)
+      ? data
+      : Object.values(data).reduce<TLineChartData>(
+          (longest, ds) => (ds && ds.length > longest.length ? ds : longest),
+          []
+        );
 
     return {
       currentX,
@@ -73,11 +77,12 @@ export function LineChartProvider({
       domain,
       yDomain,
       xDomain,
-      xLength: xLength ?? domainRows.length,
+      xLength: xLength ?? longestDataset.length,
     };
   }, [
     currentIndex,
     currentX,
+    allRows,
     data,
     domain,
     isActive,

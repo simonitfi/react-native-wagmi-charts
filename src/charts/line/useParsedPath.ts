@@ -2,12 +2,15 @@ import * as React from 'react';
 import { scheduleOnRN } from 'react-native-worklets';
 import {
   useAnimatedReaction,
+  useSharedValue,
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
 import { addPath, findPath, findPathIndex, getPath } from './utils';
 import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
-import { parse } from 'react-native-redash';
+import { parse, Path } from 'react-native-redash';
 import { LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
+
+const EMPTY_PATH: Path = { curves: [], move: { x: 0, y: 0 }, close: false };
 
 
 export default function useParsedPath({
@@ -41,6 +44,8 @@ export default function useParsedPath({
 
   const [isOriginal, setIsOriginal] = React.useState(false);
 
+  const parsedPathSV = useSharedValue<Path>(EMPTY_PATH);
+
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   const smoothedPath = React.useMemo(() => {
@@ -60,7 +65,6 @@ export default function useParsedPath({
         }, pathBuffer.current)
         if (bPathIndex > -1) {
           const res = pathBuffer.current[bPathIndex].data
-          pathBuffer.current.splice(bPathIndex, 1);
           return res
         }
         const result = getPath({
@@ -94,7 +98,6 @@ export default function useParsedPath({
       // Check if the error is an instance of TypeError
       if (error instanceof TypeError) {
         // Log an error message indicating property access to an undefined object
-        console.log('Error: Property access to undefined object, useParsedPath', error);
       }
       // If the error is not a TypeError, rethrow the error
       else {
@@ -112,7 +115,11 @@ export default function useParsedPath({
     xDomain,
   ]);
 
-  const smoothedParsedPath = React.useMemo(() => (parse(smoothedPath)), [smoothedPath]);
+  const smoothedParsedPath = React.useMemo(() => {
+    if (!smoothedPath) return EMPTY_PATH;
+    const result = parse(smoothedPath);
+    return result ?? EMPTY_PATH;
+  }, [smoothedPath]);
 
   const path = React.useMemo(() => {
     if (data && data.length > 0) {
@@ -134,9 +141,16 @@ export default function useParsedPath({
   }, [isOriginal, smoothedPath]);
 
   const parsedPath = React.useMemo(() => {
-    if (isOriginal) return parse(path)
+    if (isOriginal) {
+      const result = parse(path);
+      return result ?? EMPTY_PATH;
+    }
     return smoothedParsedPath
   }, [isOriginal, path]);
+
+  React.useLayoutEffect(() => {
+    parsedPathSV.value = parsedPath;
+  }, [parsedPath]);
 
   React.useEffect(() => {
     if (update !== 0 && !isLiveData) {
@@ -153,12 +167,12 @@ export default function useParsedPath({
       }
     },
     (result, previous) => {
-      if (result !== previous) {
+      if (result !== previous && previous !== null) {
         scheduleOnRN(setIsOriginal, result)
       }
     },
     [isActive]
   );
 
-  return { parsedPath: parsedPath, path: path, isOriginal: isOriginal };
+  return { parsedPathSV, path: path, isOriginal: isOriginal };
 }

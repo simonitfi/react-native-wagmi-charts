@@ -60,7 +60,6 @@ export default function useAnimatedPath({
 
         if (bPathIndex > -1) {
           const res = pathBuffer.current[bPathIndex].data
-          pathBuffer.current.splice(bPathIndex, 1);
           return res
         }
         const result = getPath({
@@ -92,8 +91,7 @@ export default function useAnimatedPath({
     catch (error) {
       // Check if the error is an instance of TypeError
       if (error instanceof TypeError) {
-        // Log an error message indicating property access to an undefined object
-        console.log('Error: Property access to undefined object, smoothedPath', error);
+        // Property access to undefined object in smoothedPath
       }
       // If the error is not a TypeError, rethrow the error
       else {
@@ -128,11 +126,9 @@ export default function useAnimatedPath({
   React.useEffect(() => {
     smoothedPathSV.value = smoothedPath;
     // When not active / initial state, update path immediately on JS thread
-    // (mirrors what the original getter did: path.value = smoothedPath)
     if (!isLiveData) {
       path.value = smoothedPath;
     } else if (!isActive.value) {
-      // For live data, also update path when new data arrives and chart is not being touched
       path.value = smoothedPath;
     }
   }, [smoothedPath, isLiveData]);

@@ -11,7 +11,7 @@ import Animated, {
 import { LineChartPriceText, LineChartPriceTextProps } from './PriceText';
 
 import { CursorContext } from './Cursor';
-import { LineChartDimensionsContext } from './Chart';
+import { LineChartDimensionsContext, LineChartDataContext } from './Chart';
 import { Platform, type LayoutChangeEvent, type ViewProps } from 'react-native';
 import type { TFormatterFn } from '../candle/types';
 import { getYForX } from 'react-native-redash';
@@ -53,8 +53,11 @@ export function LineChartTooltip({
   format,
   ...props
 }: LineChartTooltipProps) {
-  const { width, height, parsedPath, isOriginal, isLiveData, update, updateContext } = React.useContext(
+  const { width, height, isLiveData, update, parsedPathSV } = React.useContext(
     LineChartDimensionsContext
+  );
+  const { isOriginal, updateContext } = React.useContext(
+    LineChartDataContext
   );
   const { type } = React.useContext(CursorContext);
   const { currentX, currentY, isActive, data, xDomain } = useLineChart();
@@ -101,20 +104,20 @@ export function LineChartTooltip({
   // When the user set a `at` index, get the index's y & x positions
   const atXPosition = useDerivedValue(() => {
     const at_ = isOriginal ? at : sAt;
-    if (at_ !== null && at_ !== undefined) {
+    if (at_ !== null && at_ !== undefined && parsedPathSV.value?.curves?.length) {
       return at_ === 0
         ? 0
-        : parsedPath.curves[Math.min(at_, parsedPath.curves.length) - 1].to.x;
+        : parsedPathSV.value.curves[Math.min(at_, parsedPathSV.value.curves.length) - 1].to.x;
     }
     return undefined;
-  }, [at, sAt, parsedPath.curves, isOriginal]);
+  }, [at, sAt, parsedPathSV, isOriginal]);
 
 
   const atYPosition = useDerivedValue(() => {
     if (atXPosition.value == null) return undefined;
-    let val = getYForX(parsedPath, atXPosition.value);
-    if (val === null) {
-      let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
+    let val = getYForX(parsedPathSV.value, atXPosition.value);
+    if (val === null && parsedPathSV.value?.curves?.length) {
+      let maxPoint = parsedPathSV.value.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0].to);
       val = maxPoint.y;
     }
     return val || 0;
@@ -170,11 +173,16 @@ export function LineChartTooltip({
 
     if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
       //opacity = 0
-      x = parsedPath.curves[Math.min(maxIndex, parsedPath.curves.length) - 1].to.x
-      y = getYForX(parsedPath, x);
-      if (y === null) {
-        let maxPoint = parsedPath.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPath.curves[0].to);
-        y = maxPoint.y;
+      if (parsedPathSV.value?.curves?.length) {
+        x = parsedPathSV.value.curves[Math.min(maxIndex, parsedPathSV.value.curves.length) - 1].to.x
+        y = getYForX(parsedPathSV.value, x);
+        if (y === null) {
+          let maxPoint = parsedPathSV.value.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0].to);
+          y = maxPoint.y;
+        }
+      } else {
+        x = 0;
+        y = 0;
       }
     } else {
       x = atXPosition.value ?? currentX.value;
@@ -267,7 +275,7 @@ export function LineChartTooltip({
     let opacity = isActive.value ? 1 : 0;
     if (isStatic) {
       // Only show static when there is no active cursor
-      if (isActive.value || (updateContext === 0 && !isLiveData))
+      if (isActive.value)
         opacity = 0;
       else
         opacity = withTiming(1);

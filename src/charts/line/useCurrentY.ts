@@ -1,21 +1,20 @@
 import { useContext, useMemo } from 'react';
 import { useDerivedValue } from 'react-native-reanimated';
-import { getYForX, parse } from 'react-native-redash';
+import { getYForX } from 'react-native-redash';
 import { LineChartContext } from './Context';
 import { LineChartDimensionsContext } from './Chart';
 
 export function useCurrentY() {
-  const { path, width } = useContext(LineChartDimensionsContext);
+  const { parsedPathSV, width } = useContext(LineChartDimensionsContext);
   const { currentX } = useContext(LineChartContext);
-  const parsedPath = useMemo(() => (path ? parse(path) : undefined), [path]);
 
   const currentY = useDerivedValue(() => {
-    if (!parsedPath) {
+    if (!parsedPathSV.value?.curves?.length) {
       return -1;
     }
     const boundedX = Math.min(width, currentX.value);
-    return getYForX(parsedPath, boundedX) || 0;
-  }, [parsedPath, width, currentX]);
+    return getYForX(parsedPathSV.value, boundedX) || 0;
+  }, [parsedPathSV, width, currentX]);
 
   return currentY;
 }

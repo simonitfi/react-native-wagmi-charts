@@ -4,11 +4,11 @@ import * as d3Shape from 'd3-shape';
 
 import { Dimensions, Platform, StyleSheet, View, ViewProps } from 'react-native';
 import { LineChartIdProvider, useLineChartData } from './Data';
-import { Path } from 'react-native-redash';
 
 import { LineChartContext } from './Context';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { Path } from 'react-native-redash';
 import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
 import useParsedPath from 'react-native-wagmi-charts/src/charts/line/useParsedPath';
 
@@ -16,18 +16,20 @@ export const LineChartDimensionsContext = React.createContext({
   width: 0,
   height: 0,
   pointWidth: 0,
-  parsedPath: {} as Path,
-  path: '',
   shape: d3Shape.curveBumpX,
   gutter: 0,
   pathWidth: 0,
   update: 0,
   isLiveData: false,
-  updateContext: 0,
+  parsedPathSV: { value: { curves: [], move: { x: 0, y: 0 }, close: false } as Path } as { value: Path },
   pathBuffer: {} as React.RefObject<LineChartPathBuffer>,
   areaBuffer: {} as React.RefObject<LineChartAreaBuffer>,
   forcePathUpdate: 0,
-  isOriginal: false
+});
+
+export const LineChartDataContext = React.createContext({
+  isOriginal: false,
+  updateContext: 0,
 });
 
 export type LineChartProps = ViewProps & {
@@ -43,7 +45,6 @@ export type LineChartProps = ViewProps & {
   absolute?: boolean;
   isLiveData?: boolean;
   forcePathUpdate?: boolean;
-  isOriginal: boolean;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -78,9 +79,13 @@ export function LineChart({
   }, [height]);
 
   React.useEffect(() => {
-    setTimeout(() => {
-      setUpdate(Date.now());
-    }, 100);
+    // Web-only: force an initial render so path dimensions are computed after layout.
+    // Skipped on native to avoid extra renders on every mount.
+    if (Platform.OS === 'web') {
+      setTimeout(() => {
+        setUpdate(Date.now());
+      }, 100);
+    }
   }, []);
 
   // Only call setUpdateContext once (Tooltip checks updateContext === 0 as
@@ -90,7 +95,7 @@ export function LineChart({
   useAnimatedReaction(
     () => isActive.value,
     (active, previous) => {
-      if (active === previous) return;
+      if (active === previous || previous === null) return;
       if (isLiveData) {
         // Signal live-data path refresh only when gesture ends
         if (!active) scheduleOnRN(setUpdate, Date.now());
@@ -120,7 +125,7 @@ export function LineChart({
     [data, width]
   );
 
-  const { parsedPath, path, isOriginal } = useParsedPath({
+  const { parsedPathSV, isOriginal } = useParsedPath({
     yGutter,
     id,
     isActive,
@@ -133,11 +138,9 @@ export function LineChart({
     pathBuffer
   })
 
-  const contextValue = React.useMemo(
+  const stableContextValue = React.useMemo(
     () => ({
       gutter: yGutter,
-      path,
-      parsedPath,
       pointWidth,
       width,
       height,
@@ -145,33 +148,27 @@ export function LineChart({
       shape,
       update,
       isLiveData,
-      updateContext,
+      parsedPathSV,
       pathBuffer,
       areaBuffer,
       forcePathUpdate,
-      isOriginal
     }),
-    [
-      yGutter,
-      parsedPath,
-      pointWidth,
-      width,
-      height,
-      pathWidth,
-      shape,
-      update,
-      isLiveData,
-      updateContext,
-      isOriginal
-    ]
+    [yGutter, pointWidth, width, height, pathWidth, shape, update, isLiveData]
+  );
+
+  const dataContextValue = React.useMemo(
+    () => ({ isOriginal, updateContext }),
+    [isOriginal, updateContext]
   );
 
   return (
     <LineChartIdProvider id={id}>
-      <LineChartDimensionsContext.Provider value={contextValue}>
-        <View {...props} style={[absolute && styles.absolute, props.style]}>
-          {children}
-        </View>
+      <LineChartDimensionsContext.Provider value={stableContextValue}>
+        <LineChartDataContext.Provider value={dataContextValue}>
+          <View {...props} style={[absolute && styles.absolute, props.style]}>
+            {children}
+          </View>
+        </LineChartDataContext.Provider>
       </LineChartDimensionsContext.Provider>
     </LineChartIdProvider>
   );
