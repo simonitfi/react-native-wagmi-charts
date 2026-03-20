@@ -55,13 +55,14 @@ export function LineChartHorizontalLine({
   at = { index: 0 },
   offsetY = 0,
 }: HorizontalLineProps) {
-  const { width, parsedPath, height, gutter } = React.useContext(
+  const { width, parsedPathSV, height, gutter } = React.useContext(
     LineChartDimensionsContext
   );
   const { yDomain } = useLineChart();
   const { animationDuration } = React.useContext(LineChartPathContext);
 
   const y = useDerivedValue(() => {
+    const parsedPath = parsedPathSV.value;
     if (typeof at === 'number' || at.index != null) {
       const index = typeof at === 'number' ? at : at.index;
       const yForX =
@@ -86,7 +87,7 @@ export function LineChartHorizontalLine({
     const offsetTopPixels = gutter + percentageOffsetTop * heightBetweenGutters;
 
     return withTiming(offsetTopPixels + offsetY, {duration: animationDuration});
-  }, [at, gutter, height, offsetY, parsedPath, yDomain.max, yDomain.min, animationDuration]);
+  }, [at, gutter, height, offsetY, parsedPathSV, yDomain.max, yDomain.min, animationDuration]);
 
   const lineAnimatedProps = useAnimatedProps(
     () => ({

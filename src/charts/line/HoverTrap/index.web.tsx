@@ -48,13 +48,13 @@ function isHoverEnabled(): boolean {
 }
 
 export const LineChartHoverTrap = () => {
-  const { width, parsedPath } = React.useContext(LineChartDimensionsContext);
+  const { width, parsedPathSV } = React.useContext(LineChartDimensionsContext);
   const { currentX, currentIndex, isActive, data } = useLineChart();
 
   const onMouseMove = React.useCallback(
     ({ x }: { x: number }) => {
       if (isHoverEnabled()) {
-        if (parsedPath) {
+        if (parsedPathSV.value?.curves?.length) {
           const boundedX = Math.min(x, width);
           isActive.value = true;
           currentX.value = boundedX;
@@ -75,7 +75,7 @@ export const LineChartHoverTrap = () => {
         currentIndex.value = -1;
       }
     },
-    [currentIndex, currentX, data, isActive, parsedPath, width]
+    [currentIndex, currentX, data, isActive, parsedPathSV, width]
   );
 
   const onMouseLeave = React.useCallback(() => {

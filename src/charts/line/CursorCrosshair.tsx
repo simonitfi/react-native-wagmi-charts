@@ -42,7 +42,7 @@ export function LineChartCursorCrosshair({
 }: LineChartCursorCrosshairProps) {
   const { currentX, currentY, isActive, data, xDomain } = useLineChart();
 
-  const { pathWidth: width, parsedPath } = React.useContext(
+  const { pathWidth: width, parsedPathSV } = React.useContext(
     LineChartDimensionsContext
   );
 
@@ -54,7 +54,8 @@ export function LineChartCursorCrosshair({
   const maxXBound = useSharedValue(width);
 
   React.useEffect(() => {
-    if (!parsedPath || !data || data.length === 0) return;
+    const path = parsedPathSV.value;
+    if (!path?.curves?.length || !data || data.length === 0) return;
 
     const minIndex = data.findIndex((el: { value: null }) => el.value !== null);
     const maxIndex =
@@ -69,18 +70,18 @@ export function LineChartCursorCrosshair({
     minXBound.value = (1 / total) * minVal * width;
     maxXBound.value = (1 / total) * maxVal * width;
 
-    const sx = parsedPath.curves[Math.min(maxIndex, parsedPath.curves.length) - 1]?.to.x ?? 0;
-    let sy = getYForX(parsedPath, sx) || 0;
+    const sx = path.curves[Math.min(maxIndex, path.curves.length) - 1]?.to.x ?? 0;
+    let sy = getYForX(path, sx) || 0;
     if (!sy) {
-      sy = parsedPath.curves.reduce(
+      sy = path.curves.reduce(
         (max: { x: number; y: number }, curve: { to: { x: number; y: number } }) =>
           curve.to.x > max.x ? curve.to : max,
-        parsedPath.curves[0].to
+        path.curves[0].to
       ).y;
     }
     snapX.value = sx;
     snapY.value = sy;
-  }, [data, xDomain, parsedPath, width]);
+  }, [data, xDomain, width]);
 
   // It seems that enabling spring animation on initial render on Android causes a crash.
   const [enableSpringAnimation, setEnableSpringAnimation] = React.useState(
