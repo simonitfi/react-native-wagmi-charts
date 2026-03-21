@@ -8,9 +8,9 @@ import {
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
 import { addPath, findPath, findPathIndex, getPath, interpolatePath } from './utils';
-import { LineChartDimensionsContext } from 'react-native-wagmi-charts/src/charts/line/Chart';
-import { useLineChart } from 'react-native-wagmi-charts/src/charts/line/useLineChart';
-import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
+import { LineChartDimensionsContext } from './Chart';
+import { useLineChart } from './useLineChart';
+import { LineChartPathContext } from './LineChartPathContext';
 
 function excludeSegment(a: {x: number}, b: {x: number}) {
   'worklet';
@@ -124,12 +124,14 @@ export default function useAnimatedPath({
   // recreated each render, firing the reaction continuously at ~60fps.
   const smoothedPathSV = useSharedValue(smoothedPath);
   React.useEffect(() => {
-    smoothedPathSV.value = smoothedPath;
+    if (smoothedPath) {
+      smoothedPathSV.value = smoothedPath;
+    }
     // When not active / initial state, update path immediately on JS thread
     if (!isLiveData) {
-      path.value = smoothedPath;
+      if (smoothedPath) path.value = smoothedPath;
     } else if (!isActive.value) {
-      path.value = smoothedPath;
+      if (smoothedPath) path.value = smoothedPath;
     }
   }, [smoothedPath, isLiveData]);
 

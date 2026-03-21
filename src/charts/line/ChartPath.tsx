@@ -12,7 +12,8 @@ import flattenChildren from 'react-keyed-flatten-children';
 import { LineChartDimensionsContext } from './Chart';
 import { LineChartPathContext } from './LineChartPathContext';
 import { LineChartPath, LineChartPathProps } from './Path';
-import { useLineChart } from './useLineChart';
+import { useLineChartShared } from './useLineChart';
+import { onInternalProfilerRender } from '../../profiler';
 
 const BACKGROUND_COMPONENTS = [
   'LineChartHighlight',
@@ -59,7 +60,7 @@ export function LineChartPathWrapper({
   const { height, pathWidth, width } = React.useContext(
     LineChartDimensionsContext
   );
-  const { currentX, isActive } = useLineChart();
+  const { currentX, isActive } = useLineChartShared();
   const isMounted = useSharedValue(false);
   const hasMountedAnimation = useSharedValue(false);
 
@@ -119,33 +120,37 @@ export function LineChartPathWrapper({
 
   ////////////////////////////////////////////////
 
-  let backgroundChildren;
-  let foregroundChildren;
-  if (children) {
+  // Memoize so flattenChildren + two filter passes don't re-run on every
+  // re-render when children are structurally stable (the common case).
+  const { backgroundChildren, foregroundChildren } = React.useMemo(() => {
+    if (!children) return { backgroundChildren: undefined, foregroundChildren: undefined };
     const iterableChildren = flattenChildren(children);
-    backgroundChildren = iterableChildren.filter((child) =>
-      // @ts-ignore
-      BACKGROUND_COMPONENTS.includes(child?.type?.displayName)
-    );
-    foregroundChildren = iterableChildren.filter((child) =>
-      // @ts-ignore
-      FOREGROUND_COMPONENTS.includes(child?.type?.displayName)
-    );
-  }
+    return {
+      backgroundChildren: iterableChildren.filter((child) =>
+        // @ts-ignore
+        BACKGROUND_COMPONENTS.includes(child?.type?.displayName)
+      ),
+      foregroundChildren: iterableChildren.filter((child) =>
+        // @ts-ignore
+        FOREGROUND_COMPONENTS.includes(child?.type?.displayName)
+      ),
+    };
+  }, [children]);
 
   ////////////////////////////////////////////////
 
 
   return (
+    <React.Profiler id="LineChartPathWrapper" onRender={onInternalProfilerRender}>
     <>
       <LineChartPathContext.Provider
-        value={{
+        value={React.useMemo(() => ({
           color,
           isInactive: showInactivePath,
           isTransitionEnabled: pathProps.isTransitionEnabled ?? true,
           animationDuration,
           isMounted: isMounted.value
-        }}
+        }), [color, showInactivePath, pathProps.isTransitionEnabled, animationDuration, isMounted.value])}
       >
         <View style={viewSize}>
           <Svg width={width} height={height}>
@@ -162,18 +167,17 @@ export function LineChartPathWrapper({
         </View>
       </LineChartPathContext.Provider>
       <LineChartPathContext.Provider
-        value={{
+        value={React.useMemo(() => ({
           color,
           isInactive: false,
           isTransitionEnabled: pathProps.isTransitionEnabled ?? true,
           animationDuration,
           isMounted: isMounted.value
-        }}
+        }), [color, pathProps.isTransitionEnabled, animationDuration, isMounted.value])}
       >
         <View style={StyleSheet.absoluteFill}>
           <AnimatedSVG animatedProps={svgProps} height={height}>
             {strokeWidth > 0 && <LineChartPath color={color} width={strokeWidth} {...pathProps} />}
-            <LineChartPath color={color} width={strokeWidth} {...pathProps} />
           </AnimatedSVG>
           <AnimatedSVG animatedProps={svgProps} height={height} style={StyleSheet.absoluteFill}>
             {foregroundChildren}
@@ -181,5 +185,6 @@ export function LineChartPathWrapper({
         </View>
       </LineChartPathContext.Provider>
     </>
+    </React.Profiler>
   );
 }

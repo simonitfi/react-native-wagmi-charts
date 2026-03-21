@@ -46,6 +46,7 @@ export function getArea({
     .range([height - gutter, gutter]);
 
   try {
+    const _t0 = __DEV__ ? Date.now() : 0;
     const area = shape
       .area()
       .defined((_: unknown, i: number) => (from || to) ? (i >= (from as number) && i <= (to as number)) : true)
@@ -53,6 +54,7 @@ export function getArea({
       .y0((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
       .y1(() => height)
       .curve(_shape)(data);
+    if (__DEV__) { const ms = Date.now() - _t0; if (ms > 2) console.log(`[WagmiChart] getArea pts=${data.length} orig=${isOriginalData} ${ms}ms`); }
     return area;
   }
   // Catch block to handle errors thrown in the try block

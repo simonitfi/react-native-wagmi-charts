@@ -17,3 +17,19 @@ export function useLineChart(customId?:string) {
     [lineChartContext, dataContext, currentY]
   );
 }
+
+/**
+ * Lightweight hook that returns ONLY stable SharedValue references
+ * (currentX, currentY, isActive, xDomain, etc.) WITHOUT subscribing
+ * to the data context. Use this in components (like Tooltip) that
+ * don't need reactive access to the data array.
+ */
+export function useLineChartShared() {
+  const lineChartContext = React.useContext(LineChartContext);
+  const currentY = useCurrentY();
+
+  return React.useMemo(
+    () => ({ ...lineChartContext, currentY }),
+    [lineChartContext, currentY]
+  );
+}

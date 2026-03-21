@@ -4,11 +4,12 @@ import {
   useAnimatedReaction,
   useSharedValue,
 } from 'react-native-reanimated';
-import type { TLineChartData, TLineChartDataProp } from './types';
+import type { TLineChartDataProp } from './types';
 import { LineChartDataProvider } from './Data';
 
-import type { TLineChartContext, YRangeProp } from './types';
+import type { TLineChartContext, TLineChartDomain, YRangeProp } from './types';
 import { getDomain, lineChartDataPropToArray } from './utils';
+import { onInternalProfilerRender } from '../../profiler';
 
 export const LineChartContext = React.createContext<TLineChartContext>({
   currentX: { value: -1 } as TLineChartContext['currentX'],
@@ -52,44 +53,86 @@ export function LineChartProvider({
 
   const allRows = React.useMemo(() => lineChartDataPropToArray(data), [data]);
 
-  const domain = React.useMemo(
-    () => getDomain(allRows),
-    [allRows]
-  );
+  const prevDomainRef = React.useRef<TLineChartDomain | null>(null);
+  const domain = React.useMemo(() => {
+    const d = getDomain(allRows);
+    const prev = prevDomainRef.current;
+    if (prev && prev[0] === d[0] && prev[1] === d[1]) return prev;
+    prevDomainRef.current = d;
+    return d;
+  }, [allRows]);
+
+  // Fast O(n) single-pass min/max — avoids creating an intermediate values[]
+  // and avoids the variadic Math.min/max spread (stack-overflow risk on large
+  // datasets). Short-circuits entirely when both bounds are caller-supplied.
+  // Returns the same reference when min/max haven't changed, preventing
+  // unnecessary downstream context/memo recalculations.
+  const prevYDomainRef = React.useRef<{ min: number; max: number } | null>(null);
+  const yDomain = React.useMemo(() => {
+    let min: number, max: number;
+    if (yRange?.min !== undefined && yRange?.max !== undefined) {
+      min = yRange.min; max = yRange.max;
+    } else {
+      min = Infinity; max = -Infinity;
+      for (const row of allRows) {
+        const v = row.value;
+        if (v !== null && v !== undefined) {
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+      }
+      min = yRange?.min ?? min;
+      max = yRange?.max ?? max;
+    }
+    const prev = prevYDomainRef.current;
+    if (prev && prev.min === min && prev.max === max) return prev;
+    const result = { min, max };
+    prevYDomainRef.current = result;
+    return result;
+  }, [allRows, yRange?.min, yRange?.max]);
+
+  // Stabilize xDomain reference — the caller may recreate the tuple literal
+  // every render (e.g. xDomain={[0, 100]}). Return the same reference when
+  // the values are identical to prevent downstream context re-renders.
+  const prevXDomainRef = React.useRef(xDomain);
+  const stableXDomain = React.useMemo(() => {
+    const prev = prevXDomainRef.current;
+    if (prev === xDomain) return prev;
+    if (prev && xDomain && prev[0] === xDomain[0] && prev[1] === xDomain[1]) return prev;
+    prevXDomainRef.current = xDomain;
+    return xDomain;
+  }, [xDomain]);
+
+  // Cache the longest-dataset length independently so contextValue memo
+  // doesn't need to re-run Object.values every time data changes.
+  const datasetLength = React.useMemo(() => {
+    if (xLength !== undefined) return xLength;
+    if (Array.isArray(data)) return data.length;
+    let longest = 0;
+    for (const ds of Object.values(data)) {
+      if (ds && ds.length > longest) longest = ds.length;
+    }
+    return longest;
+  }, [data, xLength]);
 
   const contextValue = React.useMemo<TLineChartContext>(() => {
-    const values = allRows.map(({ value }) => value);
-    const yDomain = {
-      min: yRange?.min ?? Math.min(...values),
-      max: yRange?.max ?? Math.max(...values),
-    }
-    const longestDataset = Array.isArray(data)
-      ? data
-      : Object.values(data).reduce<TLineChartData>(
-          (longest, ds) => (ds && ds.length > longest.length ? ds : longest),
-          []
-        );
-
     return {
       currentX,
       currentIndex,
       isActive,
       domain,
       yDomain,
-      xDomain,
-      xLength: xLength ?? longestDataset.length,
+      xDomain: stableXDomain,
+      xLength: datasetLength,
     };
   }, [
     currentIndex,
     currentX,
-    allRows,
-    data,
     domain,
     isActive,
-    yRange?.max,
-    yRange?.min,
-    xLength,
-    xDomain,
+    yDomain,
+    stableXDomain,
+    datasetLength,
   ]);
 
   useAnimatedReaction(
@@ -114,10 +157,12 @@ export function LineChartProvider({
   );
 
   return (
-    <LineChartDataProvider data={data} sData={sData}>
-      <LineChartContext.Provider value={contextValue}>
-        {children}
-      </LineChartContext.Provider>
-    </LineChartDataProvider>
+    <React.Profiler id="LineChartProvider" onRender={onInternalProfilerRender}>
+      <LineChartDataProvider data={data} sData={sData}>
+        <LineChartContext.Provider value={contextValue}>
+          {children}
+        </LineChartContext.Provider>
+      </LineChartDataProvider>
+    </React.Profiler>
   );
 }

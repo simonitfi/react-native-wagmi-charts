@@ -45,12 +45,14 @@ export function getPath({
     .range([height - gutter, gutter]);
 
   try {
+    const _t0 = __DEV__ ? Date.now() : 0;
     const path = shape
       .line()
       .defined((_: unknown, i: number) => (from || to) ? (i >= (from as number) && i <= (to as number)) : true)
       .x((_: unknown, i: number) => scaleX(xDomain ? (timestamps as number[])[i] : i))
       .y((d: { value: number, smoothedValue: number }) => scaleY(isOriginalData ? d.value : d.smoothedValue))
       .curve(_shape)(data);
+    if (__DEV__) { const ms = Date.now() - _t0; if (ms > 2) console.log(`[WagmiChart] getPath pts=${data.length} orig=${isOriginalData} ${ms}ms`); }
     return path;
   }
   // Catch block to handle errors thrown in the try block
@@ -67,4 +69,89 @@ export function getPath({
   }
   return '';
 
+}
+
+/**
+ * Incrementally extends an existing curveBumpX SVG path with exactly one new
+ * data point appended at the end, without recomputing the whole path.
+ *
+ * curveBumpX control-point formula for segment (x0,y0)→(x1,y1):
+ *   bezierCurveTo( (x0+x1)/2, y0,  (x0+x1)/2, y1,  x1, y1 )
+ *
+ * Each segment depends ONLY on its own two endpoints, so adding a point at
+ * the tail leaves every previous segment unchanged.  This makes the operation
+ * O(1) instead of O(n).
+ *
+ * Returns both the extended path string AND a pre-built curve object that can
+ * be directly pushed onto a react-native-redpath `Path.curves` array, avoiding
+ * an expensive `parse()` call.
+ *
+ * Prerequisites (caller must verify before using):
+ *  - shape === d3Shape.curveBumpX
+ *  - xDomain is provided (so the x-scale domain is fixed)
+ *  - yDomain is unchanged from the previous render (same min/max)
+ *  - exactly one point was appended (newIndex === prevIndex + 1)
+ */
+export function appendCurveBumpXSegment({
+  basePath,
+  prevIndex,
+  newIndex,
+  data,
+  width,
+  height,
+  gutter,
+  yDomain,
+  xDomain,
+  isOriginalData,
+}: {
+  basePath: string;
+  prevIndex: number;
+  newIndex: number;
+  data: TLineChartData;
+  width: number;
+  height: number;
+  gutter: number;
+  yDomain: YDomain;
+  xDomain?: [number, number];
+  isOriginalData: boolean;
+}): {
+  path: string;
+  newCurve: {
+    from: { x: number; y: number };
+    to: { x: number; y: number };
+    c1: { x: number; y: number };
+    c2: { x: number; y: number };
+  };
+} {
+  const scaleX = scaleLinear()
+    .domain(xDomain ?? [0, data.length - 1])
+    .range([0, width]);
+  const scaleY = scaleLinear()
+    .domain([yDomain.min, yDomain.max])
+    .range([height - gutter, gutter]);
+
+  const prevPoint = data[prevIndex];
+  const newPoint = data[newIndex];
+
+  const prevX = scaleX(xDomain ? prevPoint.timestamp : prevIndex);
+  const prevY = scaleY(
+    isOriginalData
+      ? prevPoint.value
+      : (prevPoint.smoothedValue ?? prevPoint.value)
+  );
+  const newX = scaleX(xDomain ? newPoint.timestamp : newIndex);
+  const newY = scaleY(
+    isOriginalData ? newPoint.value : (newPoint.smoothedValue ?? newPoint.value)
+  );
+  const midX = (prevX + newX) / 2;
+
+  return {
+    path: `${basePath}C${midX},${prevY} ${midX},${newY} ${newX},${newY}`,
+    newCurve: {
+      from: { x: prevX, y: prevY },
+      to: { x: newX, y: newY },
+      c1: { x: midX, y: prevY },
+      c2: { x: midX, y: newY },
+    },
+  };
 }

@@ -2,7 +2,6 @@ import * as React from 'react';
 
 import Animated, {
   AnimatedProps,
-  useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -15,8 +14,9 @@ import { LineChartDimensionsContext, LineChartDataContext } from './Chart';
 import { Platform, type LayoutChangeEvent, type ViewProps } from 'react-native';
 import type { TFormatterFn } from '../candle/types';
 import { getYForX } from 'react-native-redash';
-import { useLineChart } from './useLineChart';
-import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
+import { useLineChartShared } from './useLineChart';
+import { LineChartPathContext } from './LineChartPathContext';
+import { onInternalProfilerRender } from '../../profiler';
 
 export type LineChartTooltipProps = AnimatedProps<ViewProps> & {
   children?: React.ReactNode;
@@ -38,9 +38,7 @@ export type LineChartTooltipProps = AnimatedProps<ViewProps> & {
   format?: TFormatterFn<string>;
 };
 
-LineChartTooltip.displayName = 'LineChartTooltip';
-
-export function LineChartTooltip({
+export const LineChartTooltip = React.memo(function LineChartTooltip({
   children,
   xGutter = 8,
   yGutter = 8,
@@ -53,32 +51,27 @@ export function LineChartTooltip({
   format,
   ...props
 }: LineChartTooltipProps) {
-  const { width, height, isLiveData, update, parsedPathSV } = React.useContext(
+  // Read data-derived values from the centralized dataInfoSV (computed once
+  // in Chart.tsx), NOT from useLineChart().data. This means Tooltip does NOT
+  // subscribe to the data context and won't re-render on every data tick.
+  const { width, height, isLiveData, update, parsedPathSV, dataInfoSV } = React.useContext(
     LineChartDimensionsContext
   );
-  const { isOriginal, updateContext } = React.useContext(
+  const { isOriginal } = React.useContext(
     LineChartDataContext
   );
   const { type } = React.useContext(CursorContext);
-  const { currentX, currentY, isActive, data, xDomain } = useLineChart();
-  const { animationDuration, isMounted } = React.useContext(LineChartPathContext);
+  // useLineChartShared() returns only stable SharedValue refs — no data subscription
+  const { currentX, currentY, isActive } = useLineChartShared();
+  const { animationDuration } = React.useContext(LineChartPathContext);
 
   const x = useSharedValue(0);
   const lastIsActive = useSharedValue(false);
+  const hasInitialPosition = useSharedValue(false);
   const elementWidth = useSharedValue(60);
   const elementHeight = useSharedValue(yGutter);
   const elementWidthOriginal = useSharedValue(60);
   const elementHeightOriginal = useSharedValue(yGutter);
-
-  const { minIndex, maxIndex } = React.useMemo(() => {
-    const minIndex = data.findIndex((element: { value: null }) => element.value !== null);
-    const maxIndex =
-      minIndex !== 0 || data.findIndex((element: { value: null }) => element.value === null) === -1
-        ? data.length - 1
-        : data.findIndex((element: { value: null }) => element.value === null) - 1;
-
-    return { minIndex, maxIndex };
-  }, [data]);
 
   const handleLayout = React.useCallback(
     (event: LayoutChangeEvent) => {
@@ -107,7 +100,7 @@ export function LineChartTooltip({
     if (at_ !== null && at_ !== undefined && parsedPathSV.value?.curves?.length) {
       return at_ === 0
         ? 0
-        : parsedPathSV.value.curves[Math.min(at_, parsedPathSV.value.curves.length) - 1].to.x;
+        : parsedPathSV.value?.curves?.[Math.min(at_, parsedPathSV.value.curves.length) - 1]?.to?.x ?? 0;
     }
     return undefined;
   }, [at, sAt, parsedPathSV, isOriginal]);
@@ -117,14 +110,14 @@ export function LineChartTooltip({
     if (atXPosition.value == null) return undefined;
     let val = getYForX(parsedPathSV.value, atXPosition.value);
     if (val === null && parsedPathSV.value?.curves?.length) {
-      let maxPoint = parsedPathSV.value.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0].to);
+      let maxPoint = parsedPathSV.value.curves.reduce((max: {x: number; y: number}, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0]!.to);
       val = maxPoint.y;
     }
     return val || 0;
   }, [atXPosition.value]);
 
   const animatedCursorStyle = useAnimatedStyle(() => {
-    if (!data) {
+    if (!dataInfoSV.value.hasData) {
       return {
         transform: [
           { translateX: 0 },
@@ -159,9 +152,9 @@ export function LineChartTooltip({
 
     // Set from and to depending on null values on data
     const boundedX = Math.max(0, currentX.value <= width ? (currentX.value) : width);
-    const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1
-    const minVal = xDomain ? data[minIndex].timestamp : minIndex
-    const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex
+    const total = dataInfoSV.value.total;
+    const minVal = dataInfoSV.value.minVal;
+    const maxVal = dataInfoSV.value.maxVal;
     /*  
       if (!isStatic && !((boundedX / width < (1 / (data.length - 1)) * maxIndex) && (boundedX / width > (1 / (data.length - 1)) * minIndex))) {
         opacity = 0
@@ -174,10 +167,10 @@ export function LineChartTooltip({
     if (!isStatic && !(boundedX / width < (1 / (total)) * maxVal) && (boundedX / width > (1 / (total)) * minVal)) {
       //opacity = 0
       if (parsedPathSV.value?.curves?.length) {
-        x = parsedPathSV.value.curves[Math.min(maxIndex, parsedPathSV.value.curves.length) - 1].to.x
+        x = parsedPathSV.value.curves[Math.min(dataInfoSV.value.maxIndex, parsedPathSV.value.curves.length) - 1]?.to?.x ?? 0
         y = getYForX(parsedPathSV.value, x);
         if (y === null) {
-          let maxPoint = parsedPathSV.value.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0].to);
+          let maxPoint = parsedPathSV.value.curves.reduce((max: {x: number; y: number}, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0]!.to);
           y = maxPoint.y;
         }
       } else {
@@ -287,70 +280,66 @@ export function LineChartTooltip({
     // Korjaa ekalla latauksella näitä arvoja lähemmäksi oikeita
     if (translateXOffset <= 1 && isLiveData) translateXOffset = 24
     if (translateYOffset === cursorGutter && isStatic) translateY = translateY - 10
+
+    // Skip withTiming on first positioned render to prevent tooltip flying in from (0,0)
+    const skipAnimation = !hasInitialPosition.value;
+    hasInitialPosition.value = true;
+
     //translateXOffset/1.5 korjataan tooltipin kohtaa hieman oikealle
     return {
       transform: [
         {
-          translateX: isActive.value ? x - translateXOffset / 1.5 : lastIsActive_ || translateXOffset <= 1 ? x - translateXOffset : withTiming(x - translateXOffset, { duration: animationDuration })
+          translateX: isActive.value ? x - translateXOffset / 1.5 : (lastIsActive_ || translateXOffset <= 1 || skipAnimation) ? x - translateXOffset : withTiming(x - translateXOffset, { duration: animationDuration })
         },
         //+10 jos stattisia pisteitä
         {
-          translateY: isActive.value ? translateY : lastIsActive_ || (translateYOffset === cursorGutter && isStatic) ? translateY + 10 : withTiming(translateY + 10, { duration: animationDuration }),
+          translateY: isActive.value ? translateY : (lastIsActive_ || (translateYOffset === cursorGutter && isStatic) || skipAnimation) ? translateY + 10 : withTiming(translateY + 10, { duration: animationDuration }),
         },
       ],
       opacity: opacity,
     };
   }, [
-    isOriginal,
     isLiveData,
     update,
-    atXPosition,
-    atYPosition,
-    currentX,
-    currentY,
     cursorGutter,
-    elementHeight,
-    elementWidth,
-    elementHeightOriginal,
-    elementWidthOriginal,
     height,
-    isActive,
     position,
     type,
     width,
     xGutter,
     yGutter,
-    data,
     animationDuration,
-    maxIndex
   ]);
 
   const index = useDerivedValue(() => {
     if (at !== undefined) return at;
-    if (isActive.value && xDomain) {
-      const relativeX = (currentX.value / width) * (xDomain[1] - xDomain[0]);
-      return maxIndex && relativeX > data[maxIndex].timestamp ? maxIndex : undefined
+    if (isActive.value && dataInfoSV.value.hasXDomain) {
+      const relativeX = (currentX.value / width) * dataInfoSV.value.total;
+      return dataInfoSV.value.maxIndex && relativeX > dataInfoSV.value.maxVal ? dataInfoSV.value.maxIndex : undefined
     }
-    return maxIndex;
-  }, [at, isActive.value, xDomain, data, currentX.value, width, maxIndex]);
+    return dataInfoSV.value.maxIndex;
+  }, [at, width]);
 
   return (
-    <Animated.View
-      onLayout={handleLayout}
-      {...props}
-      style={[
-        {
-          position: 'absolute',
-          padding: 0,
-          margin: 0,
-          alignSelf: 'flex-start',
-        },
-        animatedCursorStyle,
-        props.style,
-      ]}
-    >
-      {children || null}
-      <LineChartPriceText index={index} style={[{ padding: 0, margin: 0 }, textStyle]} {...textProps} format={format} />
-    </Animated.View>
+    <React.Profiler id={`LineChartTooltip-at${at ?? 'cursor'}`} onRender={onInternalProfilerRender}>
+      <Animated.View
+        onLayout={handleLayout}
+        {...props}
+        style={[
+          {
+            position: 'absolute',
+            padding: 0,
+            margin: 0,
+            alignSelf: 'flex-start',
+          },
+          animatedCursorStyle,
+          props.style,
+        ]}
+      >
+        {children || null}
+        <LineChartPriceText index={index} style={[{ padding: 0, margin: 0 }, textStyle]} {...textProps} format={format} />
+      </Animated.View>
+    </React.Profiler>
   );
-}
+});
+LineChartTooltip.displayName = 'LineChartTooltip';

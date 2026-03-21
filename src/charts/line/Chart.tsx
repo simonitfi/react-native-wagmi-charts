@@ -9,8 +9,18 @@ import { LineChartContext } from './Context';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
 import { Path } from 'react-native-redash';
-import { LineChartAreaBuffer, LineChartPathBuffer } from 'react-native-wagmi-charts/src/charts/line/types';
-import useParsedPath from 'react-native-wagmi-charts/src/charts/line/useParsedPath';
+import { LineChartAreaBuffer, LineChartPathBuffer } from './types';
+import useParsedPath from './useParsedPath';
+import { onInternalProfilerRender } from '../../profiler';
+
+export type DataInfoSV = {
+  hasData: boolean;
+  total: number;
+  minVal: number;
+  maxVal: number;
+  maxIndex: number;
+  hasXDomain: boolean;
+};
 
 export const LineChartDimensionsContext = React.createContext({
   width: 0,
@@ -24,7 +34,8 @@ export const LineChartDimensionsContext = React.createContext({
   parsedPathSV: { value: { curves: [], move: { x: 0, y: 0 }, close: false } as Path } as { value: Path },
   pathBuffer: {} as React.RefObject<LineChartPathBuffer>,
   areaBuffer: {} as React.RefObject<LineChartAreaBuffer>,
-  forcePathUpdate: 0,
+  forcePathUpdate: undefined as boolean | undefined,
+  dataInfoSV: { value: { hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false } as DataInfoSV } as { value: DataInfoSV },
 });
 
 export const LineChartDataContext = React.createContext({
@@ -63,7 +74,7 @@ export function LineChart({
   forcePathUpdate,
   ...props
 }: LineChartProps) {
-  const { xLength, isActive } = React.useContext(LineChartContext);
+  const { xLength, isActive, xDomain } = React.useContext(LineChartContext);
   const { data } = useLineChartData({
     id,
   });
@@ -74,13 +85,11 @@ export function LineChart({
   const areaBuffer = React.useRef<LineChartAreaBuffer>([]);
 
   React.useEffect(() => {
-    // On WEb force update
+    // On Web force update
     Platform.OS === 'web' && setUpdate(Date.now())
   }, [height]);
 
   React.useEffect(() => {
-    // Web-only: force an initial render so path dimensions are computed after layout.
-    // Skipped on native to avoid extra renders on every mount.
     if (Platform.OS === 'web') {
       setTimeout(() => {
         setUpdate(Date.now());
@@ -88,19 +97,14 @@ export function LineChart({
     }
   }, []);
 
-  // Only call setUpdateContext once (Tooltip checks updateContext === 0 as
-  // "cursor never used" sentinel). For live data, setUpdate is handled inside
-  // useAnimatedPath's own isActive reaction — no need to fire every frame here.
   const updateContextSetRef = useSharedValue(false);
   useAnimatedReaction(
     () => isActive.value,
     (active, previous) => {
       if (active === previous || previous === null) return;
       if (isLiveData) {
-        // Signal live-data path refresh only when gesture ends
         if (!active) scheduleOnRN(setUpdate, Date.now());
       } else {
-        // Flip updateContext from 0 once so Tooltip knows cursor has been used
         if (!updateContextSetRef.value) {
           updateContextSetRef.value = true;
           scheduleOnRN(setUpdateContext, Date.now());
@@ -110,20 +114,54 @@ export function LineChart({
     [isLiveData]
   );
 
+  const dataLength = data ? data.length : 0;
+
+  // Stabilize pathWidth: round to integer so ±1 data length fluctuations
+  // don't cause a different value every tick.
+  const prevPathWidthRef = React.useRef(width);
   const pathWidth = React.useMemo(() => {
     let allowedWidth = width;
-    if (data && xLength > data.length) {
-      allowedWidth = (width * data.length) / xLength;
+    if (dataLength > 0 && xLength > dataLength) {
+      allowedWidth = Math.round(width * dataLength / xLength);
     }
-    // On WEb force update
-    Platform.OS === 'web' && setUpdate(Date.now())
+    if (Math.abs(allowedWidth - prevPathWidthRef.current) < 2) {
+      return prevPathWidthRef.current;
+    }
+    prevPathWidthRef.current = allowedWidth;
     return allowedWidth;
-  }, [data, width, xLength]);
+  }, [dataLength, width, xLength]);
 
-  const pointWidth = React.useMemo(
-    () => width / (data ? data.length - 1 : 1),
-    [data, width]
-  );
+  React.useEffect(() => {
+    Platform.OS === 'web' && setUpdate(Date.now());
+  }, [pathWidth]);
+
+  // Compute data-derived values ONCE here (not per-tooltip).
+  // Stored as a SharedValue so Tooltip worklets auto-track changes
+  // without requiring React re-renders.
+  const dataInfoSV = useSharedValue<DataInfoSV>({
+    hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false,
+  });
+  React.useEffect(() => {
+    if (!data || data.length === 0) {
+      dataInfoSV.value = { hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false };
+      return;
+    }
+    let minIdx = 0, maxIdx = data.length - 1;
+    if (data[0]?.value === null || data[data.length - 1]?.value === null) {
+      minIdx = data.findIndex((e) => e.value !== null);
+      maxIdx = minIdx !== 0 || data.findIndex((e) => e.value === null) === -1
+        ? data.length - 1
+        : data.findIndex((e) => e.value === null) - 1;
+    }
+    dataInfoSV.value = {
+      hasData: true,
+      total: xDomain ? xDomain[1] - xDomain[0] : data.length - 1,
+      minVal: xDomain ? (data[minIdx]?.timestamp ?? 0) : minIdx,
+      maxVal: xDomain ? (data[maxIdx]?.timestamp ?? 0) : maxIdx,
+      maxIndex: maxIdx,
+      hasXDomain: !!xDomain,
+    };
+  }, [data, xDomain]);
 
   const { parsedPathSV, isOriginal } = useParsedPath({
     yGutter,
@@ -136,12 +174,12 @@ export function LineChart({
     isLiveData,
     update,
     pathBuffer
-  })
+  });
 
   const stableContextValue = React.useMemo(
     () => ({
       gutter: yGutter,
-      pointWidth,
+      pointWidth: width / (dataLength > 1 ? dataLength - 1 : 1),
       width,
       height,
       pathWidth,
@@ -152,8 +190,10 @@ export function LineChart({
       pathBuffer,
       areaBuffer,
       forcePathUpdate,
+      dataInfoSV,
     }),
-    [yGutter, pointWidth, width, height, pathWidth, shape, update, isLiveData]
+    // pointWidth computed inline. parsedPathSV/dataInfoSV are stable SharedValue refs.
+    [yGutter, width, height, pathWidth, shape, update, isLiveData]
   );
 
   const dataContextValue = React.useMemo(
@@ -162,15 +202,17 @@ export function LineChart({
   );
 
   return (
-    <LineChartIdProvider id={id}>
-      <LineChartDimensionsContext.Provider value={stableContextValue}>
-        <LineChartDataContext.Provider value={dataContextValue}>
-          <View {...props} style={[absolute && styles.absolute, props.style]}>
-            {children}
-          </View>
-        </LineChartDataContext.Provider>
-      </LineChartDimensionsContext.Provider>
-    </LineChartIdProvider>
+    <React.Profiler id={`LineChart-${id ?? 'default'}`} onRender={onInternalProfilerRender}>
+      <LineChartIdProvider id={id}>
+        <LineChartDimensionsContext.Provider value={stableContextValue}>
+          <LineChartDataContext.Provider value={dataContextValue}>
+            <View {...props} style={[absolute && styles.absolute, props.style]}>
+              {children}
+            </View>
+          </LineChartDataContext.Provider>
+        </LineChartDimensionsContext.Provider>
+      </LineChartIdProvider>
+    </React.Profiler>
   );
 }
 

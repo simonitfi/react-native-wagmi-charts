@@ -13,7 +13,7 @@ import { useLineChart } from './useLineChart';
 
 import { LineChartDimensionsContext } from './Chart';
 import { addPath, getArea } from './utils';
-import { LineChartPathContext } from 'react-native-wagmi-charts/src/charts/line/LineChartPathContext';
+import { LineChartPathContext } from './LineChartPathContext';
 
 function excludeSegment(a: {x: number}, b: {x: number}) {
   'worklet';
@@ -64,7 +64,6 @@ export default function useAnimatedArea({
 
           if (bPathIndex > -1) {
             const res = areaBuffer.current[bPathIndex].data
-            areaBuffer.current.splice(bPathIndex, 1);
             return res
           }
         }
@@ -158,7 +157,7 @@ export default function useAnimatedArea({
   useAnimatedReaction(
     () => {
       if (update === 0 || (!isActive.value && isLiveData)) {
-        area.value = smoothedArea
+        if (smoothedArea) area.value = smoothedArea
       }
       return isActive.value
     },
@@ -176,7 +175,7 @@ export default function useAnimatedArea({
 
   useAnimatedReaction(
     () => {
-      if (currentArea.value !== area.value) {
+      if (currentArea.value !== area.value && area.value) {
         previousArea.value = currentArea.value
         currentArea.value = area.value
         return currentArea.value;
