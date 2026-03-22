@@ -4,6 +4,7 @@ import Animated, {
   AnimatedProps,
   useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
@@ -40,48 +41,74 @@ export function LineChartCursorCrosshair({
   crosshairOuterProps = {},
   ...props
 }: LineChartCursorCrosshairProps) {
-  const { currentX, currentY, isActive, data, xDomain } = useLineChart();
+  const { currentX, isActive } = useLineChart();
 
-  const { pathWidth: width, parsedPathSV } = React.useContext(
+  const { pathWidth: width, parsedPathSV, dataInfoSV } = React.useContext(
     LineChartDimensionsContext
   );
 
-  // Precomputed boundary scalars — updated on JS thread only when data changes,
-  // so the worklet never iterates arrays on every frame.
-  const snapX = useSharedValue(0);
-  const snapY = useSharedValue(0);
-  const minXBound = useSharedValue(0);
-  const maxXBound = useSharedValue(width);
-
-  React.useEffect(() => {
+  // Compute snap position and x/y bounds entirely on the UI thread from SharedValues.
+  // This eliminates the JS-thread async timing race that caused the crosshair to
+  // briefly appear at y=0 (top of chart) when parsedPathSV was updated before the
+  // JS-thread recomputeSnap callback had a chance to run.
+  const snapInfoDV = useDerivedValue(() => {
     const path = parsedPathSV.value;
-    if (!path?.curves?.length || !data || data.length === 0) return;
+    const info = dataInfoSV.value;
 
-    const minIndex = data.findIndex((el: { value: null }) => el.value !== null);
-    const maxIndex =
-      minIndex !== 0 || data.findIndex((el: { value: null }) => el.value === null) === -1
-        ? data.length - 1
-        : data.findIndex((el: { value: null }) => el.value === null) - 1;
-
-    const total = xDomain ? xDomain[1] - xDomain[0] : data.length - 1;
-    const minVal = xDomain ? data[minIndex].timestamp : minIndex;
-    const maxVal = xDomain ? data[maxIndex].timestamp : maxIndex;
-
-    minXBound.value = (1 / total) * minVal * width;
-    maxXBound.value = (1 / total) * maxVal * width;
-
-    const sx = path.curves[Math.min(maxIndex, path.curves.length) - 1]?.to.x ?? 0;
-    let sy = getYForX(path, sx) || 0;
-    if (!sy) {
-      sy = path.curves.reduce(
-        (max: { x: number; y: number }, curve: { to: { x: number; y: number } }) =>
-          curve.to.x > max.x ? curve.to : max,
-        path.curves[0].to
-      ).y;
+    if (!info.hasData || path.curves.length === 0) {
+      return { snapX: 0, snapY: -1, minXBound: 0, maxXBound: width };
     }
-    snapX.value = sx;
-    snapY.value = sy;
-  }, [data, xDomain, width]);
+
+    // Left bound from dataInfoSV (first non-null real data point).
+    const minXBound = info.total > 0 ? (info.minVal - info.xDomainMin) / info.total * width : 0;
+
+    // Scan ALL curves to find the actual rightmost rendered point.
+    let snapX = 0;
+    let snapY = -1;
+    let rightmostX = -1;
+    for (let i = 0; i < path.curves.length; i++) {
+      const c = path.curves[i];
+      if (c && c.to.x > rightmostX) {
+        rightmostX = c.to.x;
+        snapX = c.to.x;
+        snapY = c.to.y;
+      }
+    }
+
+    // Refine snapY with getYForX
+    if (snapX > 0) {
+      const refined = getYForX(path, snapX);
+      if (refined !== null && refined >= 0) snapY = refined;
+    }
+
+    const maxXBound = snapX > 0 ? snapX : width;
+
+    return { snapX, snapY, minXBound, maxXBound };
+  }, [parsedPathSV, dataInfoSV, width]);
+
+  // When the snap endpoint moves (path data changed), immediately update
+  // currentX on the UI thread so there's no 1-frame glitch where the cursor
+  // sits at the OLD currentX on the NEW path (which maps to a completely
+  // different Y, e.g. near the top of the chart).
+  const prevSnapXRef = useSharedValue(-1);
+  useAnimatedReaction(
+    () => snapInfoDV.value.snapX,
+    (newSnapX) => {
+      const prevSnap = prevSnapXRef.value;
+      prevSnapXRef.value = newSnapX;
+      // If the cursor was tracking the old snap endpoint, move it to the new one.
+      // The threshold (5 px) is tight enough to avoid interfering with user drags.
+      if (
+        isActive.value &&
+        prevSnap >= 0 &&
+        newSnapX > 0 &&
+        Math.abs(currentX.value - prevSnap) < 5
+      ) {
+        currentX.value = newSnapX;
+      }
+    },
+    [snapInfoDV, isActive, currentX]
+  );
 
   // It seems that enabling spring animation on initial render on Android causes a crash.
   const [enableSpringAnimation, setEnableSpringAnimation] = React.useState(
@@ -119,22 +146,22 @@ export function LineChartCursorCrosshair({
 
   const animatedCursorStyle = useAnimatedStyle(
     () => {
-      const withinRange =
-        currentX.value > minXBound.value && currentX.value < maxXBound.value;
-      const x = withinRange ? currentX.value : snapX.value;
+      const { snapX, snapY, minXBound, maxXBound } = snapInfoDV.value;
+      const path = parsedPathSV.value;
 
-      // currentY returns -1 when getYForX fails (null path bounds) or when the
-      // path has no curves yet.  snapY starts at 0 (top of chart) until its
-      // useEffect fires.  Use a three-level fallback so the spring-in animation
-      // never shows the crosshair at y=0:
-      //   1. currentY when in range AND valid (> 0)
-      //   2. snapY when valid (> 0)
-      //   3. far offscreen (crosshair scale is growing 0→1; this frame is invisible)
-      const currentYValid = withinRange && currentY.value > 0;
-      const snapYValid = snapY.value > 0;
-      const y = currentYValid ? currentY.value
-               : snapYValid   ? snapY.value
-               : -outerSize * 2;  // offscreen until a real y is available
+      const withinRange =
+        currentX.value > minXBound && currentX.value < maxXBound;
+      const x = withinRange ? currentX.value : snapX;
+
+      // Compute Y directly from the current parsed path instead of relying on
+      // the external currentY shared value, which may be stale for a frame
+      // when the path changes before currentX is updated.
+      let computedY = -1;
+      if (withinRange && path.curves.length > 0) {
+        computedY = getYForX(path, currentX.value) ?? -1;
+      }
+      const hasValidY = computedY >= 0 || snapY >= 0;
+      const y = computedY >= 0 ? computedY : snapY;
 
       return {
         transform: [
@@ -142,10 +169,10 @@ export function LineChartCursorCrosshair({
           { translateY: y - outerSize / 2 },
           { scale: animatedScale.value },
         ],
-        opacity: 1,
+        opacity: hasValidY ? 1 : 0,
       };
     },
-    [currentX, currentY, animatedScale, outerSize, snapX, snapY, minXBound, maxXBound]
+    [currentX, animatedScale, outerSize, snapInfoDV, parsedPathSV]
   );
 
   return (

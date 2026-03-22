@@ -20,6 +20,8 @@ export type DataInfoSV = {
   maxVal: number;
   maxIndex: number;
   hasXDomain: boolean;
+  /** xDomain[0] (or 0 for index mode) — needed to correctly map timestamps to pixel bounds. */
+  xDomainMin: number;
 };
 
 /**
@@ -75,7 +77,7 @@ export const LineChartDimensionsContext = React.createContext({
   pathBuffer: {} as React.RefObject<LineChartPathBuffer>,
   areaBuffer: {} as React.RefObject<LineChartAreaBuffer>,
   forcePathUpdate: undefined as boolean | undefined,
-  dataInfoSV: { value: { hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false } as DataInfoSV } as { value: DataInfoSV },
+  dataInfoSV: { value: { hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false, xDomainMin: 0 } as DataInfoSV } as { value: DataInfoSV },
   performanceConfig: {} as LineChartPerformanceConfig,
 });
 
@@ -118,7 +120,7 @@ export function LineChart({
   ...props
 }: LineChartProps) {
   const { xLength, isActive, xDomain } = React.useContext(LineChartContext);
-  const { data } = useLineChartData({
+  const { data, sData } = useLineChartData({
     id,
   });
 
@@ -182,30 +184,49 @@ export function LineChart({
   // Compute data-derived values ONCE here (not per-tooltip).
   // Stored as a SharedValue so Tooltip worklets auto-track changes
   // without requiring React re-renders.
+  // Use smoothData (sData || data) so that maxIndex/maxVal track the actual
+  // end of the rendered path, which includes estimation/future data when sData
+  // is provided.  minIndex/minVal are always taken from real data so the left
+  // boundary stays anchored to measured (not estimated) values.
+  const smoothData = sData || data;
   const dataInfoSV = useSharedValue<DataInfoSV>({
-    hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false,
+    hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false, xDomainMin: 0,
   });
   React.useEffect(() => {
     if (!data || data.length === 0) {
-      dataInfoSV.value = { hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false };
+      dataInfoSV.value = { hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false, xDomainMin: 0 };
       return;
     }
-    let minIdx = 0, maxIdx = data.length - 1;
-    if (data[0]?.value === null || data[data.length - 1]?.value === null) {
-      minIdx = data.findIndex((e) => e.value !== null);
-      maxIdx = minIdx !== 0 || data.findIndex((e) => e.value === null) === -1
-        ? data.length - 1
-        : data.findIndex((e) => e.value === null) - 1;
+    // Left bound: first non-null point in real data
+    let minIdx = 0;
+    if (data[0]?.value === null) {
+      const found = data.findIndex((e) => e.value !== null);
+      minIdx = found >= 0 ? found : 0;
+    }
+    // Right bound: use the last point of smoothData (sData || data).
+    // When sData is present (estimation), extend to end of estimation.
+    // When only data is present, use the last NON-NULL index so maxVal
+    // doesn't point into the null-padded future space past the path end.
+    const effectiveData = smoothData && smoothData.length > 0 ? smoothData : data;
+    let maxIdx: number;
+    if (sData && sData.length > 0) {
+      // With estimation data: extend to the actual last estimation point.
+      maxIdx = effectiveData.length - 1;
+    } else {
+      // History-only: find last non-null so maxVal stays within the path.
+      const firstNull = data.findIndex((e) => e.value === null);
+      maxIdx = firstNull > 0 ? firstNull - 1 : data.length - 1;
     }
     dataInfoSV.value = {
       hasData: true,
-      total: xDomain ? xDomain[1] - xDomain[0] : data.length - 1,
+      total: xDomain ? xDomain[1] - xDomain[0] : effectiveData.length - 1,
       minVal: xDomain ? (data[minIdx]?.timestamp ?? 0) : minIdx,
-      maxVal: xDomain ? (data[maxIdx]?.timestamp ?? 0) : maxIdx,
+      maxVal: xDomain ? (effectiveData[maxIdx]?.timestamp ?? 0) : maxIdx,
       maxIndex: maxIdx,
       hasXDomain: !!xDomain,
+      xDomainMin: xDomain ? xDomain[0] : 0,
     };
-  }, [data, xDomain]);
+  }, [data, sData, xDomain]);
 
   const { parsedPathSV, isOriginal } = useParsedPath({
     yGutter,
