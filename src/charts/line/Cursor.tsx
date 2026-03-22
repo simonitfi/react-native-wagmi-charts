@@ -92,6 +92,10 @@ export function LineChartCursor({
   useEffect(() => {
     if (at !== undefined) {
       const xPosition = scaleX(at);
+      // Set currentX immediately so currentY is derived correctly on the very
+      // first frame the spring scale animation plays, preventing the crosshair
+      // from briefly appearing at y=0 (top of chart) before snapping into place.
+      currentX.value = xPosition;
       scheduleOnRN(linearScalePositionAndIndex, { xPosition });
       isActive.value = true;
     }
@@ -110,6 +114,10 @@ export function LineChartCursor({
       );
 
       if (snapToPoint) {
+        // Set the raw x position immediately so currentY is derived correctly
+        // on the first frame, preventing the crosshair from dropping from y=0.
+        // The JS-thread snap will refine it to the nearest data point shortly after.
+        currentX.value = xPosition;
         // We have to run this on the JS thread unfortunately as the scaleLinear functions won't work on UI thread
         scheduleOnRN(linearScalePositionAndIndex, { xPosition });
       } else if (!snapToPoint) {

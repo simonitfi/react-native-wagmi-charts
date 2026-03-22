@@ -54,7 +54,7 @@ export const LineChartTooltip = React.memo(function LineChartTooltip({
   // Read data-derived values from the centralized dataInfoSV (computed once
   // in Chart.tsx), NOT from useLineChart().data. This means Tooltip does NOT
   // subscribe to the data context and won't re-render on every data tick.
-  const { width, height, isLiveData, update, parsedPathSV, dataInfoSV } = React.useContext(
+  const { width, height, isLiveData, update, parsedPathSV, dataInfoSV, performanceConfig } = React.useContext(
     LineChartDimensionsContext
   );
   const { isOriginal } = React.useContext(
@@ -117,6 +117,18 @@ export const LineChartTooltip = React.memo(function LineChartTooltip({
   }, [atXPosition.value]);
 
   const animatedCursorStyle = useAnimatedStyle(() => {
+    // guardTooltipIdle: skip all math when tooltip is invisible
+    // (no cursor active AND no static `at` position set)
+    if (performanceConfig.guardTooltipIdle && !isActive.value && at == null) {
+      return {
+        transform: [
+          { translateX: 0 },
+          { translateY: 0 },
+        ],
+        opacity: 0,
+      };
+    }
+
     if (!dataInfoSV.value.hasData) {
       return {
         transform: [

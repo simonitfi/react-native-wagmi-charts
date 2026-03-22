@@ -34,7 +34,7 @@ export default function useAnimatedPath({
 }) {
 
   const { data, sData, yDomain, xDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape, isLiveData, update, pathBuffer } = React.useContext(
+  const { pathWidth, height, gutter, shape, isLiveData, update, pathBuffer, performanceConfig } = React.useContext(
     LineChartDimensionsContext
   );
   const { animationDuration } = React.useContext(LineChartPathContext);
@@ -211,7 +211,13 @@ export default function useAnimatedPath({
 
   const animatedProps = useAnimatedProps(() => {
     let d = currentPath.value || '';
-    if (previousPath.value && enabled && allowMorph.value && !isActive.value) {
+    // guardTransitionEnd: skip interpolation when morph is finished
+    if (performanceConfig.guardTransitionEnd && transition.value === 1) {
+      return { d };
+    }
+    // skipMorphOnLiveData: never morph on live charts
+    const shouldMorph = !(performanceConfig.skipMorphOnLiveData && isLiveData);
+    if (previousPath.value && enabled && shouldMorph && allowMorph.value && !isActive.value) {
       const pathInterpolator = interpolatePath(previousPath.value, currentPath.value, excludeSegment);
       d = pathInterpolator(transition.value);
     }

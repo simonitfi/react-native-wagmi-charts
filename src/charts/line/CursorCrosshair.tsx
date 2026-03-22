@@ -122,7 +122,19 @@ export function LineChartCursorCrosshair({
       const withinRange =
         currentX.value > minXBound.value && currentX.value < maxXBound.value;
       const x = withinRange ? currentX.value : snapX.value;
-      const y = withinRange ? currentY.value : snapY.value;
+
+      // currentY returns -1 when getYForX fails (null path bounds) or when the
+      // path has no curves yet.  snapY starts at 0 (top of chart) until its
+      // useEffect fires.  Use a three-level fallback so the spring-in animation
+      // never shows the crosshair at y=0:
+      //   1. currentY when in range AND valid (> 0)
+      //   2. snapY when valid (> 0)
+      //   3. far offscreen (crosshair scale is growing 0→1; this frame is invisible)
+      const currentYValid = withinRange && currentY.value > 0;
+      const snapYValid = snapY.value > 0;
+      const y = currentYValid ? currentY.value
+               : snapYValid   ? snapY.value
+               : -outerSize * 2;  // offscreen until a real y is available
 
       return {
         transform: [

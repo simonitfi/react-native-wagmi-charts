@@ -13,7 +13,11 @@ export function useCurrentY() {
       return -1;
     }
     const boundedX = Math.min(width, currentX.value);
-    return getYForX(parsedPathSV.value, boundedX) || 0;
+    // Use null-coalescing (??) not logical-OR (||) so that a legitimate y=0
+    // (data at the very top of the canvas) is preserved, while null/undefined
+    // (getYForX outside path bounds) becomes -1 — a sentinel the Crosshair
+    // style worklet can detect and treat as "invalid".
+    return getYForX(parsedPathSV.value, boundedX) ?? -1;
   }, [parsedPathSV, width, currentX]);
 
   return currentY;

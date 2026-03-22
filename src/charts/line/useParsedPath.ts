@@ -51,11 +51,16 @@ export default function useParsedPath({
   const smoothData = React.useMemo(() => (sData || data), [sData, data]);
 
   // Cache used for O(1) incremental path extension on live charts.
-  // Keyed by (dataLength, yDomain) — reset whenever a full recompute runs.
+  // Keyed by (dataLength, yDomain, xDomain) — reset whenever a full recompute
+  // runs. xDomain is included so that a scale change (rare with xDomainQuantize)
+  // forces a full recompute rather than mixing coordinates from two different
+  // x-scales in the same path.
   const liveCacheRef = React.useRef<{
     dataLength: number;
     yDominMin: number;
     yDomainMax: number;
+    xDomainMin: number;
+    xDomainMax: number;
     path: string;
     parsedPath: Path;
   } | null>(null);
@@ -78,7 +83,8 @@ export default function useParsedPath({
       //     shifts every tick and all previous x-coordinates become stale)
       //  2. shape is curveBumpX (each segment depends only on its own endpoints)
       //  3. yDomain is unchanged (y-scale stable)
-      //  4. Exactly one point was added at the tail
+      //  4. xDomain is unchanged (mixing coordinates from two scales is incorrect)
+      //  5. Exactly one point was added at the tail
       const cache = liveCacheRef.current;
       if (
         isLiveData &&
@@ -87,7 +93,9 @@ export default function useParsedPath({
         cache !== null &&
         smoothData.length === cache.dataLength + 1 &&
         yDomain.min === cache.yDominMin &&
-        yDomain.max === cache.yDomainMax
+        yDomain.max === cache.yDomainMax &&
+        xDomain[0] === cache.xDomainMin &&
+        xDomain[1] === cache.xDomainMax
       ) {
         const { path: newPath, newCurve } = appendCurveBumpXSegment({
           basePath: cache.path,
@@ -113,6 +121,8 @@ export default function useParsedPath({
           dataLength: smoothData.length,
           yDominMin: yDomain.min,
           yDomainMax: yDomain.max,
+          xDomainMin: xDomain[0],
+          xDomainMax: xDomain[1],
           path: newPath,
           parsedPath: newParsedPath,
         };
@@ -165,6 +175,8 @@ export default function useParsedPath({
             dataLength: smoothData.length,
             yDominMin: yDomain.min,
             yDomainMax: yDomain.max,
+            xDomainMin: xDomain?.[0] ?? -1,
+            xDomainMax: xDomain?.[1] ?? -1,
             path: res,
             parsedPath: parsed,
           };
@@ -212,6 +224,8 @@ export default function useParsedPath({
           dataLength: smoothData.length,
           yDominMin: yDomain.min,
           yDomainMax: yDomain.max,
+          xDomainMin: xDomain?.[0] ?? -1,
+          xDomainMax: xDomain?.[1] ?? -1,
           path: result,
           parsedPath: parsed,
         };

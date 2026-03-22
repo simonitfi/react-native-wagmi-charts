@@ -22,6 +22,46 @@ export type DataInfoSV = {
   hasXDomain: boolean;
 };
 
+/**
+ * Performance tuning knobs for LineChart.
+ * All flags default to `false` (original behaviour) so existing code is unaffected.
+ *
+ * Pass via `<LineChart performanceConfig={{ skipMorphOnLiveData: true, ... }}>`
+ */
+export type LineChartPerformanceConfig = {
+  /**
+   * When `true`, path/area morph animations are skipped on live-data charts.
+   * The chart snaps instantly to the new path instead of interpolating at 60 fps.
+   * Eliminates the most expensive per-frame worklet (`interpolatePath`).
+   * @default false
+   */
+  skipMorphOnLiveData?: boolean;
+  /**
+   * When `true`, the `useAnimatedProps` worklet for path/area short-circuits
+   * once the morph transition finishes (`transition === 1`).
+   * Prevents the worklet from re-evaluating every frame while idle.
+   * @default false
+   */
+  guardTransitionEnd?: boolean;
+  /**
+   * When `true`, the tooltip `useAnimatedStyle` worklet returns early
+   * when no cursor is active and no static `at` index is set.
+   * Avoids ~190 lines of per-frame math when the tooltip is invisible.
+   * @default false
+   */
+  guardTooltipIdle?: boolean;
+  /**
+   * When `true`, the chart path always fills the full container width
+   * regardless of whether `dataLength < xLength`.
+   * Prevents the ~10% right-side gap that appears when the Provider's
+   * `xLength` is larger than the current number of data points.
+   * @default false
+   */
+  fillWidth?: boolean;
+};
+
+const DEFAULT_PERF_CONFIG: LineChartPerformanceConfig = {};
+
 export const LineChartDimensionsContext = React.createContext({
   width: 0,
   height: 0,
@@ -36,6 +76,7 @@ export const LineChartDimensionsContext = React.createContext({
   areaBuffer: {} as React.RefObject<LineChartAreaBuffer>,
   forcePathUpdate: undefined as boolean | undefined,
   dataInfoSV: { value: { hasData: false, total: 0, minVal: 0, maxVal: 0, maxIndex: 0, hasXDomain: false } as DataInfoSV } as { value: DataInfoSV },
+  performanceConfig: {} as LineChartPerformanceConfig,
 });
 
 export const LineChartDataContext = React.createContext({
@@ -56,6 +97,7 @@ export type LineChartProps = ViewProps & {
   absolute?: boolean;
   isLiveData?: boolean;
   forcePathUpdate?: boolean;
+  performanceConfig?: LineChartPerformanceConfig;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -72,6 +114,7 @@ export function LineChart({
   absolute,
   isLiveData = false,
   forcePathUpdate,
+  performanceConfig = DEFAULT_PERF_CONFIG,
   ...props
 }: LineChartProps) {
   const { xLength, isActive, xDomain } = React.useContext(LineChartContext);
@@ -120,6 +163,7 @@ export function LineChart({
   // don't cause a different value every tick.
   const prevPathWidthRef = React.useRef(width);
   const pathWidth = React.useMemo(() => {
+    if (performanceConfig.fillWidth) return width;
     let allowedWidth = width;
     if (dataLength > 0 && xLength > dataLength) {
       allowedWidth = Math.round(width * dataLength / xLength);
@@ -191,9 +235,10 @@ export function LineChart({
       areaBuffer,
       forcePathUpdate,
       dataInfoSV,
+      performanceConfig,
     }),
     // pointWidth computed inline. parsedPathSV/dataInfoSV are stable SharedValue refs.
-    [yGutter, width, height, pathWidth, shape, update, isLiveData]
+    [yGutter, width, height, pathWidth, shape, update, isLiveData, performanceConfig]
   );
 
   const dataContextValue = React.useMemo(

@@ -37,7 +37,7 @@ export default function useAnimatedArea({
 }) {
 
   const { data, sData, yDomain, xDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape, isLiveData, update, areaBuffer } = React.useContext(
+  const { pathWidth, height, gutter, shape, isLiveData, update, areaBuffer, performanceConfig } = React.useContext(
     LineChartDimensionsContext
   );
   const { animationDuration } = React.useContext(LineChartPathContext);
@@ -194,7 +194,13 @@ export default function useAnimatedArea({
   const animatedProps = useAnimatedProps(() => {
     let d = currentArea.value || '';
 
-    if (previousArea.value && enabled && allowMorph.value && !isActive.value) {
+    // guardTransitionEnd: skip interpolation when morph is finished
+    if (performanceConfig.guardTransitionEnd && transition.value === 1) {
+      return { d };
+    }
+    // skipMorphOnLiveData: never morph on live charts
+    const shouldMorph = !(performanceConfig.skipMorphOnLiveData && isLiveData);
+    if (previousArea.value && enabled && shouldMorph && allowMorph.value && !isActive.value) {
       const pathInterpolator = interpolatePath(previousArea.value, currentArea.value, excludeSegment);
       d = pathInterpolator(transition.value);
     }
