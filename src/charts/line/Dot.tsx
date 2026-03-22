@@ -89,18 +89,21 @@ export function LineChartDot({
 
   const y = useDerivedValue(
     () => {
-      if (x.value < 0) return -size;
-      if (!parsedPathSV.value?.curves?.length) return -size;
-      if (update === 0) {
-        const v = getYForX(parsedPathSV.value, x.value);
-        return v !== null && v !== undefined ? v : -size;
-      }
-      let val = getYForX(parsedPathSV.value, x.value)
-      if (val === null && parsedPathSV.value?.curves?.length) {
-        let maxPoint = parsedPathSV.value.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0].to);
+      if (x.value < 0 || !parsedPathSV.value?.curves?.length) return -size;
+      let val = getYForX(parsedPathSV.value, x.value);
+      // getYForX returns null when x is outside the path range (e.g. during
+      // withTiming animation or at the very end).  Fall back to the rightmost
+      // curve endpoint so the dot stays visible at the path tip instead of
+      // disappearing or jumping to y=0.
+      if (val === null) {
+        const curves = parsedPathSV.value.curves;
+        let maxPoint = curves[0].to;
+        for (let i = 1; i < curves.length; i++) {
+          if (curves[i].to.x > maxPoint.x) maxPoint = curves[i].to;
+        }
         val = maxPoint.y;
       }
-      return val !== null && val !== undefined ? val : -size;
+      return val;
     }
     ,
     [parsedPathSV, x, isLiveData, animationDuration, update, size]
