@@ -83,22 +83,27 @@ export function LineChartDot({
   ////////////////////////////////////////////////////////////
 
   const x = useDerivedValue(() => {
-    if (!parsedPathSV.value?.curves?.length) return 0;
+    if (!parsedPathSV.value?.curves?.length) return -1;
     return withTiming(Math.min(getXPositionForCurve(parsedPathSV.value, isOriginal ? at : sAt), width), {duration: animationDuration});
   }, [at, sAt, parsedPathSV, isLiveData, isOriginal, update, width, animationDuration]);
 
   const y = useDerivedValue(
     () => {
-      if (update === 0) return getYForX(parsedPathSV.value, x.value) || 0
+      if (x.value < 0) return -size;
+      if (!parsedPathSV.value?.curves?.length) return -size;
+      if (update === 0) {
+        const v = getYForX(parsedPathSV.value, x.value);
+        return v !== null && v !== undefined ? v : -size;
+      }
       let val = getYForX(parsedPathSV.value, x.value)
       if (val === null && parsedPathSV.value?.curves?.length) {
         let maxPoint = parsedPathSV.value.curves.reduce((max, curve) => curve.to.x > max.x ? curve.to : max, parsedPathSV.value.curves[0].to);
         val = maxPoint.y;
       }
-      return (val || 0)
+      return val !== null && val !== undefined ? val : -size;
     }
     ,
-    [parsedPathSV, x, isLiveData, animationDuration, update]
+    [parsedPathSV, x, isLiveData, animationDuration, update, size]
   );
 
   ////////////////////////////////////////////////////////////
