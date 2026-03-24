@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Animated, {
   AnimatedProps,
@@ -6,6 +7,7 @@ import Animated, {
   Easing,
   SharedValue,
   useAnimatedProps,
+  useAnimatedReaction,
   useDerivedValue,
   useSharedValue,
   withDelay,
@@ -82,17 +84,50 @@ export function LineChartDot({
 
   ////////////////////////////////////////////////////////////
 
+  const hasInitialPosition = useSharedValue(false);
+  // When true the dot snaps (no withTiming) — mirrors path's allowMorph=false
+  // window so they reach the new position in the same frame.
+  const snapDot = useSharedValue(false);
+
+  const enableDotAnim = () => {
+    setTimeout(() => { snapDot.value = false; }, 1000);
+  };
+
+  // Reset on the UI thread the exact moment isActive changes, so the dot
+  // snaps in the same frame the area snaps (allowMorph=false). A JS-thread
+  // useEffect fires 2+ frames too late and causes the dot to trail behind.
+  useAnimatedReaction(
+    () => isActive.value,
+    (current, previous) => {
+      if (previous !== null && current !== previous) {
+        hasInitialPosition.value = false;
+        if (!current) {
+          // Keep snapping for 1 second after release, matching the path's
+          // allowMorph=false window so dot and path move in lockstep.
+          snapDot.value = true;
+          scheduleOnRN(enableDotAnim);
+        }
+      }
+    },
+    []
+  );
+
   const x = useDerivedValue(() => {
     if (!parsedPathSV.value?.curves?.length) return -1;
-    return withTiming(Math.min(getXPositionForCurve(parsedPathSV.value, isOriginal ? at : sAt), width), {duration: animationDuration});
-  }, [at, sAt, parsedPathSV, isLiveData, isOriginal, update, width, animationDuration]);
+    const target = Math.min(getXPositionForCurve(parsedPathSV.value, isOriginal ? at : sAt), width);
+    if (!hasInitialPosition.value || snapDot.value) {
+      hasInitialPosition.value = true;
+      return target;
+    }
+    return withTiming(target, {duration: animationDuration});
+  }, [at, sAt, parsedPathSV, isLiveData, isOriginal, update, width, animationDuration, forceUpdate, snapDot]);
 
   const y = useDerivedValue(
     () => {
       if (x.value < 0 || !parsedPathSV.value?.curves?.length) return -size;
       let val = getYForX(parsedPathSV.value, x.value);
       // getYForX returns null when x is outside the path range (e.g. during
-      // withTiming animation or at the very end).  Fall back to the rightmost
+      // withTiming animation or at the very end). Fall back to the rightmost
       // curve endpoint so the dot stays visible at the path tip instead of
       // disappearing or jumping to y=0.
       if (val === null) {
@@ -104,9 +139,8 @@ export function LineChartDot({
         val = maxPoint.y;
       }
       return val;
-    }
-    ,
-    [parsedPathSV, x, isLiveData, animationDuration, update, size]
+    },
+    [parsedPathSV, x, isLiveData, animationDuration, update, size, forceUpdate]
   );
 
   ////////////////////////////////////////////////////////////

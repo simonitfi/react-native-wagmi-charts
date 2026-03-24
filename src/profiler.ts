@@ -40,9 +40,9 @@ export const onInternalProfilerRender: ProfilerOnRenderCallback = (
   commitTime,
 ) => {
   if (__DEV__ && actualDuration >= SLOW_MS) {
-    console.warn(
-      `[WagmiChart] SLOW "${id}" [${phase}]  actual=${actualDuration.toFixed(1)}ms  base=${baseDuration.toFixed(1)}ms`,
-    );
+    // console.warn(
+    //   `[WagmiChart] SLOW "${id}" [${phase}]  actual=${actualDuration.toFixed(1)}ms  base=${baseDuration.toFixed(1)}ms`,
+    // );
   }
   _externalCb?.(id, phase, actualDuration, baseDuration, startTime, commitTime);
 };

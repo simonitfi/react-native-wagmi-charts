@@ -178,7 +178,7 @@ export function LineChart({
   }, [dataLength, width, xLength]);
 
   React.useEffect(() => {
-    Platform.OS === 'web' && setUpdate(Date.now());
+    setUpdate(Date.now())
   }, [pathWidth]);
 
   // Compute data-derived values ONCE here (not per-tooltip).

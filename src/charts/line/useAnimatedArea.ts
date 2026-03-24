@@ -7,12 +7,9 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
-import { findPathIndex, interpolatePath } from './utils';
-
-import { useLineChart } from './useLineChart';
-
+import { getArea, interpolatePath } from './utils';
 import { LineChartDimensionsContext } from './Chart';
-import { addPath, getArea } from './utils';
+import { useLineChart } from './useLineChart';
 import { LineChartPathContext } from './LineChartPathContext';
 
 function excludeSegment(a: {x: number}, b: {x: number}) {
@@ -37,7 +34,7 @@ export default function useAnimatedArea({
 }) {
 
   const { data, sData, yDomain, xDomain } = useLineChart();
-  const { pathWidth, height, gutter, shape, isLiveData, update, areaBuffer, performanceConfig } = React.useContext(
+  const { pathWidth, height, gutter, shape, isLiveData, update, performanceConfig } = React.useContext(
     LineChartDimensionsContext
   );
   const { animationDuration } = React.useContext(LineChartPathContext);
@@ -50,23 +47,6 @@ export default function useAnimatedArea({
   const smoothedArea = React.useMemo(() => {
     try {
       if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length && typeof smoothData[sFrom] !== undefined && typeof smoothData[sTo].smoothedValue !== undefined) {
-        if (smoothData[sTo].timestamp > 300000) {
-          const bPathIndex = findPathIndex({
-            from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
-            meta: {
-              pathWidth: pathWidth,
-              height: height,
-              gutter: gutter,
-              yDomain,
-              xDomain
-            }
-          }, areaBuffer.current)
-
-          if (bPathIndex > -1) {
-            const res = areaBuffer.current[bPathIndex].data
-            return res
-          }
-        }
         const result = getArea({
           data: smoothData,
           from: sFrom,
@@ -79,29 +59,14 @@ export default function useAnimatedArea({
           xDomain,
           isOriginalData: false,
         });
-        addPath({
-          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
-          meta: {
-            pathWidth: pathWidth,
-            height: height,
-            gutter: gutter,
-            yDomain,
-            xDomain
-          }
-        }, areaBuffer.current)
-        return result
+        return result;
       }
     }
-    // Catch block to handle errors thrown in the try block
     catch (error) {
-      // Check if the error is an instance of TypeError
       if (error instanceof TypeError) {
-        // Log an error message indicating property access to an undefined object
         console.log('Error: Property access to undefined object, smoothedArea', error);
-      }
-      // If the error is not a TypeError, rethrow the error
-      else {
-        throw error; // Rethrow the error if it's not a TypeError
+      } else {
+        throw error;
       }
     }
     return '';
@@ -124,6 +89,11 @@ export default function useAnimatedArea({
   const previousArea = useSharedValue(smoothedArea);
 
   const area = useSharedValue('');
+
+  // Mirror smoothedArea as a SharedValue so the isActive reaction on the UI
+  // thread always has the freshest value when the finger lifts — same pattern
+  // as smoothedPathSV in useAnimatedPath.
+  const smoothedAreaSV = useSharedValue(smoothedArea);
 
   const enableMorph = () => {
     setTimeout(() => allowMorph.value = true, 1000)
@@ -148,44 +118,63 @@ export default function useAnimatedArea({
     }
   }
 
+  // Keep a stable ref to setArea so worklets always call the latest closure
+  // (same pattern as setPathRef/setPathLatest in useAnimatedPath).
+  const setAreaRef = React.useRef(setArea);
+  React.useEffect(() => {
+    setAreaRef.current = setArea;
+  });
+  const setAreaLatest = React.useCallback(() => {
+    setAreaRef.current();
+  }, []);
+
+  React.useEffect(() => {
+    if (smoothedArea) {
+      smoothedAreaSV.value = smoothedArea;
+    }
+    // When not active / initial state, update area immediately on JS thread
+    if (!isLiveData) {
+      if (smoothedArea) area.value = smoothedArea;
+    } else if (!isActive.value) {
+      if (smoothedArea) area.value = smoothedArea;
+    }
+  }, [smoothedArea, isLiveData]);
+
   React.useEffect(() => {
     if (update !== 0 && !isLiveData) {
-      setArea()
+      setAreaLatest();
     }
   }, [height, gutter, shape, update, isLiveData]);
 
   useAnimatedReaction(
-    () => {
-      if (update === 0 || (!isActive.value && isLiveData)) {
-        if (smoothedArea) area.value = smoothedArea
-      }
-      return isActive.value
-    },
+    () => isActive.value,
     (result, previous) => {
+      if (!result) {
+        // Always restore smooth area on release — for both live and non-live.
+        // For non-live charts the setArea/setPath path is never called so the
+        // area stays correct, but for live charts the active state shows the
+        // original-data area which must revert.
+        area.value = smoothedAreaSV.value;
+      }
       if (!!previous !== result) {
-        allowMorph.value = false
-        !result && scheduleOnRN(enableMorph)
+        allowMorph.value = false;
+        !result && scheduleOnRN(enableMorph);
       }
       if (result && isLiveData) {
-        scheduleOnRN(setArea)
+        scheduleOnRN(setAreaLatest);
       }
     },
-    [isActive, smoothedArea]
+    [isActive, smoothedAreaSV]
   );
 
   useAnimatedReaction(
-    () => {
-      if (currentArea.value !== area.value && area.value) {
-        previousArea.value = currentArea.value
-        currentArea.value = area.value
-        return currentArea.value;
-      }
-      return false
-    },
-    (result, previous) => {
-      if (result && result !== previous) {
+    () => area.value,
+    (current, previous) => {
+      if (current !== previous && current) {
+        previousArea.value = currentArea.value;
+        currentArea.value = current;
         transition.value = 0;
-        transition.value = withTiming(1, {duration: animationDuration});
+        transition.value = withTiming(1, { duration: animationDuration });
       }
     },
     [animationDuration]

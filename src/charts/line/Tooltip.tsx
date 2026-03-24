@@ -1,7 +1,9 @@
 import * as React from 'react';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import Animated, {
   AnimatedProps,
+  useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
@@ -68,6 +70,23 @@ export const LineChartTooltip = React.memo(function LineChartTooltip({
   const x = useSharedValue(0);
   const lastIsActive = useSharedValue(false);
   const hasInitialPosition = useSharedValue(false);
+  // Mirrors path's allowMorph=false window: snap for 1 second after release
+  const snapTooltip = useSharedValue(false);
+
+  const enableTooltipAnim = () => {
+    setTimeout(() => { snapTooltip.value = false; }, 1000);
+  };
+
+  useAnimatedReaction(
+    () => isActive.value,
+    (current, previous) => {
+      if (previous !== null && current !== previous && !current) {
+        snapTooltip.value = true;
+        scheduleOnRN(enableTooltipAnim);
+      }
+    },
+    []
+  );
   const elementWidth = useSharedValue(60);
   const elementHeight = useSharedValue(yGutter);
   const elementWidthOriginal = useSharedValue(60);
@@ -301,11 +320,11 @@ export const LineChartTooltip = React.memo(function LineChartTooltip({
     return {
       transform: [
         {
-          translateX: isActive.value ? x - translateXOffset / 1.5 : (lastIsActive_ || translateXOffset <= 1 || skipAnimation) ? x - translateXOffset : withTiming(x - translateXOffset, { duration: animationDuration })
+          translateX: isActive.value ? x - translateXOffset / 1.5 : (lastIsActive_ || translateXOffset <= 1 || skipAnimation || snapTooltip.value) ? x - translateXOffset : withTiming(x - translateXOffset, { duration: animationDuration })
         },
         //+10 jos stattisia pisteitä
         {
-          translateY: isActive.value ? translateY : (lastIsActive_ || (translateYOffset === cursorGutter && isStatic) || skipAnimation) ? translateY + 10 : withTiming(translateY + 10, { duration: animationDuration }),
+          translateY: isActive.value ? translateY : (lastIsActive_ || (translateYOffset === cursorGutter && isStatic) || skipAnimation || snapTooltip.value) ? translateY + 10 : withTiming(translateY + 10, { duration: animationDuration }),
         },
       ],
       opacity: opacity,

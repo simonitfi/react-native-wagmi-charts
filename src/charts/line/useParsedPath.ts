@@ -276,7 +276,7 @@ export default function useParsedPath({
     return smoothedParsedPath
   }, [isOriginal, path]);
 
-  React.useLayoutEffect(() => {
+  React.useEffect(() => {
     parsedPathSV.value = parsedPath;
   }, [parsedPath]);
 

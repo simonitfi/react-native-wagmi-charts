@@ -7,7 +7,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { SharedValue } from "react-native-reanimated/lib/types/lib";
-import { addPath, findPath, findPathIndex, getPath, interpolatePath } from './utils';
+import { getPath, interpolatePath } from './utils';
 import { LineChartDimensionsContext } from './Chart';
 import { useLineChart } from './useLineChart';
 import { LineChartPathContext } from './LineChartPathContext';
@@ -47,21 +47,6 @@ export default function useAnimatedPath({
   const smoothedPath = React.useMemo(() => {
     try {
       if (smoothData && smoothData.length > 1 && sTo > 0 && sTo < smoothData.length && typeof smoothData[sFrom] !== undefined && typeof smoothData[sTo].smoothedValue !== undefined) {
-        const bPathIndex = findPathIndex({
-          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: '',
-          meta: {
-            pathWidth: pathWidth,
-            height: height,
-            gutter: gutter,
-            yDomain,
-            xDomain
-          }
-        }, pathBuffer.current)
-
-        if (bPathIndex > -1) {
-          const res = pathBuffer.current[bPathIndex].data
-          return res
-        }
         const result = getPath({
           data: smoothData,
           from: sFrom,
@@ -74,28 +59,14 @@ export default function useAnimatedPath({
           xDomain,
           isOriginalData: false,
         });
-        addPath({
-          from: sFrom, to: sTo, fromData: smoothData[sFrom].smoothedValue, toData: smoothData[sTo].smoothedValue, totalLength: smoothData.length, data: result,
-          meta: {
-            pathWidth: pathWidth,
-            height: height,
-            gutter: gutter,
-            yDomain,
-            xDomain
-          }
-        }, pathBuffer.current)
-        return result
+        return result;
       }
     }
-    // Catch block to handle errors thrown in the try block
     catch (error) {
-      // Check if the error is an instance of TypeError
       if (error instanceof TypeError) {
         // Property access to undefined object in smoothedPath
-      }
-      // If the error is not a TypeError, rethrow the error
-      else {
-        throw error; // Rethrow the error if it's not a TypeError
+      } else {
+        throw error;
       }
     }
     return '';
